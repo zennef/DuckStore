@@ -197,7 +197,7 @@ interface PricingRule {
 
 Rule classes in `pricing/rules/`: `BaseCostRule`, `VolumeDiscountRule`, `PackageAdjustmentRule`, `CountryTaxRule`, `ShippingCostRule`. `ShippingCostRule` delegates to `ctx.shipping` for both amount and label and does no shipping math itself. Money helpers (`toCents`, `percentOf`, `formatUsd`) live in `pricing/money.ts`.
 
-`PricingPipeline` runs rules **in order**, each against the **running total**, and collects line items.
+`PricingPipeline.run(input)` runs rules **in order**, each against the **running total**, skips rules that return null, and returns `{ lineItems, totalCents }`. `input` is a `PricingContext` without `runningTotalCents`; the pipeline starts it at 0.
 
 Order:
 1. Base: quantity x price
@@ -225,7 +225,13 @@ Order:
 | Case | Expected total |
 |------|----------------|
 | 150 Medium @ $15, USA, AIR | $6,602.76 |
-| Add more as we go, including boundaries at 100/101 and 1000/1001 | |
+| 100 Large @ $20, Bolivia, LAND (no volume discount) | $3,373.00 |
+| 101 Large @ $20, Bolivia, LAND (volume discount) | $2,927.38 |
+| 1000 Small @ $10, India, AIR (no air discount) | $40,472.00 |
+| 1001 Small @ $10, Mexico, AIR (15% off air) | $35,655.62 |
+| 50 XSmall @ $8, "usa", SEA (lower-case country) | $919.20 |
+
+All live in `pricing/pricing.pipeline.spec.ts`, along with an invariant check across 2,000+ orders that line items sum exactly to the total.
 
 ---
 
