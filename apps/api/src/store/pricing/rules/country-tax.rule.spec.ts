@@ -29,11 +29,15 @@ describe('CountryTaxRule', () => {
     it.each([
       'US',
       'U.S.',
+      'U.S.A.',
+      'USA.',
       'United States',
       'United States of America',
       // case-insensitive, after trimming
       'us',
       ' u.s. ',
+      'usa.',
+      ' u.s.a. ',
       'UNITED STATES',
       '  united states of america  ',
     ])('"%s" is taxed as USA at 18%%', (country) => {
@@ -44,7 +48,7 @@ describe('CountryTaxRule', () => {
       });
     });
 
-    it.each(['U.S.A.', 'America', 'U S', 'United States of Mexico'])(
+    it.each(['America', 'U S', 'United States of Mexico'])(
       '"%s" is not a listed alias, so it is an other country (15%%)',
       (country) => {
         expect(CountryTaxRule.taxFor(country)).toEqual({ name: 'Other country', percent: 15 });

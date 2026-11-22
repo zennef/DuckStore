@@ -17,6 +17,8 @@ const TAX_BY_COUNTRY: Record<string, CountryTax> = {
 const COUNTRY_ALIASES: Record<string, string> = {
   US: 'USA',
   'U.S.': 'USA',
+  'U.S.A.': 'USA',
+  'USA.': 'USA',
   'UNITED STATES': 'USA',
   'UNITED STATES OF AMERICA': 'USA',
 };
