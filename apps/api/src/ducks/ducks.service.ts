@@ -60,8 +60,15 @@ export class DucksService {
    */
   update(id: number, dto: UpdateDuckDto): Promise<DuckWriteResult> {
     return this.prisma.$transaction(async (tx) => {
-      const current = await tx.duck.findFirst({ where: { id, deleted: false } });
-      if (!current) throw notFound(id);
+      // Lock A's row first. A concurrent decrementStock then waits on the lock and
+      // re-evaluates its WHERE once we commit, so it either applies to fresh data or
+      // returns 409 if A was merged away. Without the lock, a decrement landing between
+      // our read and write would be overwritten and the ordered units would reappear.
+      const locked = await tx.$queryRaw<{ id: number }[]>`
+        SELECT id FROM ducks WHERE id = ${id} AND deleted = false FOR UPDATE`;
+      if (locked.length === 0) throw notFound(id);
+      // Read after locking, so the quantity is current.
+      const current = await tx.duck.findUniqueOrThrow({ where: { id } });
 
       const price = dto.price ?? current.price;
       const quantity = dto.quantity ?? current.quantity;
@@ -85,7 +92,11 @@ export class DucksService {
         return { duck, merged: true };
       }
 
-      const duck = await tx.duck.update({ where: { id }, data: { price, quantity } });
+      // Only the fields in the DTO; Prisma skips undefined ones.
+      const duck = await tx.duck.update({
+        where: { id },
+        data: { price: dto.price, quantity: dto.quantity },
+      });
       return { duck, merged: false };
     });
   }

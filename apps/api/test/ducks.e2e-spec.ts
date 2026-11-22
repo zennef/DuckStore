@@ -4,6 +4,7 @@ import { Color, Prisma, Size } from '@prisma/client';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
+import { DucksService } from '../src/ducks/ducks.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 
 describe('Ducks (e2e)', () => {
@@ -182,6 +183,25 @@ describe('Ducks (e2e)', () => {
 
     it('returns 404 for a missing duck', async () => {
       await api().patch('/api/ducks/12345').send({ quantity: 1 }).expect(404);
+    });
+
+    it('does not lose concurrent stock decrements during price-only edits', async () => {
+      // Only one duck exists, so neither price collides with anything.
+      const duck = await seed({ quantity: 1000, price: 20 });
+      const ducks = app.get(DucksService);
+
+      const decrements = Array.from({ length: 20 }, () => ducks.decrementStock(duck.id, 10));
+      const edits = Array.from({ length: 20 }, (_, i) =>
+        api()
+          .patch(`/api/ducks/${duck.id}`)
+          .send({ price: i % 2 === 0 ? 21 : 22 })
+          .expect(200),
+      );
+      await Promise.all([...decrements, ...edits]);
+
+      const final = await prisma.duck.findUniqueOrThrow({ where: { id: duck.id } });
+      expect(final).toMatchObject({ quantity: 800, deleted: false });
+      expect([21, 22]).toContain(final.price);
     });
   });
 

@@ -92,6 +92,7 @@ If editing a duck (A) would make it identical (color, size, price) to another no
 - Soft-delete A so it stays in history. A keeps its pre-edit price and quantity, so history shows what it was before the merge.
 - Return B, with a flag indicating a merge happened so the UI can say so: `{ duck: B, merged: true }`. A plain edit returns `{ duck: A, merged: false }`.
 - Do all of this in one transaction. If several ducks qualify as B, the lowest id wins.
+- The transaction starts with `SELECT ... FOR UPDATE` on A, so a concurrent `decrementStock` waits, then applies to fresh data or returns 409 if A was merged away. A plain edit writes only the fields in the body.
 - Editing a missing or deleted duck is a 404.
 
 ### Frontend
