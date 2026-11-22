@@ -73,10 +73,11 @@ Price is stored as DOUBLE per the spec. DECIMAL is the usual choice for money, b
 
 ### API (`/api/ducks`)
 - `GET /api/ducks` returns non-deleted ducks as a plain array, sorted by quantity **descending** (matches the mockup), then id ascending as a tiebreak.
-- `POST /api/ducks` adds a duck (see merge rule).
+- `POST /api/ducks` adds a duck (see merge rule). Returns `{ duck, merged }`: **201** when it created a record, **200** when it merged into an existing one.
 - `PATCH /api/ducks/:id` updates **price and quantity only**. Both optional, at least one required. Color and size in the body are rejected (400, via the global `ValidationPipe` with `whitelist` and `forbidNonWhitelisted`).
   - Quantity may be **0** on update (on create it must be 1+). An order can drain stock to 0 and the edit form must still save.
-- `DELETE /api/ducks/:id` sets `deleted = true`. Never a physical delete.
+- `DELETE /api/ducks/:id` sets `deleted = true`. Never a physical delete. Returns **204**, or 404 if the duck is missing or already deleted.
+- `PATCH` returns 200 with `{ duck, merged }` (see edit collision). A non-integer `:id` is a 400.
 
 ### Merge-on-add rule
 If a non-deleted duck exists with the same color, size and price, add the new quantity to it and return it. Otherwise create a new record.
