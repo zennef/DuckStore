@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useDucks } from '../../api/ducks';
 import type { Duck } from '../../api/types';
 import { PlusIcon } from '../../components/icons';
+import { DeleteDuckDialog } from './DeleteDuckDialog';
 import { DuckForm } from './DuckForm';
 import { DuckTable } from './DuckTable';
 
@@ -72,6 +73,9 @@ export function WarehousePage() {
       {dialog?.kind === 'add' && <DuckForm mode="create" onClose={close} onSaved={close} />}
       {dialog?.kind === 'edit' && (
         <DuckForm mode="edit" duck={dialog.duck} onClose={close} onSaved={close} onStale={close} />
+      )}
+      {dialog?.kind === 'delete' && (
+        <DeleteDuckDialog duck={dialog.duck} onClose={close} onDeleted={close} onStale={close} />
       )}
     </div>
   );
