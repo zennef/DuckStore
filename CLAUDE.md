@@ -72,7 +72,7 @@ Price is stored as DOUBLE per the spec. DECIMAL is the usual choice for money, b
 ## Warehouse module
 
 ### API (`/api/ducks`)
-- `GET /api/ducks` returns non-deleted ducks, sorted by quantity **descending** (matches the mockup).
+- `GET /api/ducks` returns non-deleted ducks as a plain array, sorted by quantity **descending** (matches the mockup), then id ascending as a tiebreak.
 - `POST /api/ducks` adds a duck (see merge rule).
 - `PATCH /api/ducks/:id` updates **price and quantity only**. Both optional, at least one required. Color and size in the body are rejected (400, via the global `ValidationPipe` with `whitelist` and `forbidNonWhitelisted`).
   - Quantity may be **0** on update (on create it must be 1+). An order can drain stock to 0 and the edit form must still save.
@@ -81,14 +81,17 @@ Price is stored as DOUBLE per the spec. DECIMAL is the usual choice for money, b
 ### Merge-on-add rule
 If a non-deleted duck exists with the same color, size and price, add the new quantity to it and return it. Otherwise create a new record.
 - Deleted ducks are **ignored** when matching (they stay as history).
-- Response indicates whether it merged or created, so the UI can say so.
+- Response indicates whether it merged or created, so the UI can say so: `{ duck, merged }`.
+- Runs in one transaction. If several non-deleted ducks match (see the race below), the lowest id wins.
+- **Accepted race:** two concurrent adds of a combination that doesn't exist yet can both miss the lookup and create twins. There is no unique index to stop it, because price is a DOUBLE and deleted ducks share the same values. We accept this: it needs two simultaneous adds of the same new duck, and editing either twin later merges them via the edit collision rule.
 
 ### Edit collision
 If editing a duck (A) would make it identical (color, size, price) to another non-deleted duck (B), **auto-merge**, mirroring the add rule:
 - Add A's (edited) quantity to B.
-- Soft-delete A so it stays in history.
-- Return B, with a flag indicating a merge happened so the UI can say so.
-- Do all of this in one transaction.
+- Soft-delete A so it stays in history. A keeps its pre-edit price and quantity, so history shows what it was before the merge.
+- Return B, with a flag indicating a merge happened so the UI can say so: `{ duck: B, merged: true }`. A plain edit returns `{ duck: A, merged: false }`.
+- Do all of this in one transaction. If several ducks qualify as B, the lowest id wins.
+- Editing a missing or deleted duck is a 404.
 
 ### Frontend
 - Layout per mockup: top bar "Duck Store Platform", sidebar (Warehouse, Store), page header "Duck Warehouse" with subtitle, "+ Add Duck" button top right, "Duck Inventory" card with table.
@@ -131,11 +134,11 @@ Response:
 The response also includes `"duckId"` (the duck the order drew from).
 
 ### Which duck an order uses
-Orders only give color and size, but several ducks can share those at different prices. Use the **lowest-priced** non-deleted match with enough quantity. Return 404 if no match exists, 409 if no match has enough stock.
+Orders only give color and size, but several ducks can share those at different prices. Use the **lowest-priced** non-deleted match with enough quantity, lowest id as a tiebreak. Return 404 if no non-deleted duck has that color and size, 409 if none has enough stock. This is `DucksService.findCheapestMatch`.
 
 ### Stock
 Placing an order **decrements** the chosen duck's quantity. (Interpretation call: the spec calls it an order, and a real order consumes stock.)
-- Decrement atomically with a conditional update (`WHERE id = ? AND quantity >= ?`). If zero rows update, another order got there first: return 409.
+- Decrement atomically with a conditional update (`WHERE id = ? AND deleted = false AND quantity >= ?`), in `DucksService.decrementStock`. If zero rows update, another order (or a delete) got there first: return 409. Don't retry with another duck.
 - Pricing is computed from the same duck record that was decremented.
 
 ---
