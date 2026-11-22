@@ -13,11 +13,21 @@ const TAX_BY_COUNTRY: Record<string, CountryTax> = {
   INDIA: { name: 'India', percent: 19 },
 };
 
+/** Other spellings that mean USA. Bolivia and India match their exact names only. */
+const COUNTRY_ALIASES: Record<string, string> = {
+  US: 'USA',
+  'U.S.': 'USA',
+  'UNITED STATES': 'USA',
+  'UNITED STATES OF AMERICA': 'USA',
+};
+
 const OTHER_COUNTRY_TAX: CountryTax = { name: 'Other country', percent: 15 };
 
 export class CountryTaxRule implements PricingRule {
   static taxFor(country: string): CountryTax {
-    return TAX_BY_COUNTRY[country.trim().toUpperCase()] ?? OTHER_COUNTRY_TAX;
+    const normalized = country.trim().toUpperCase();
+    const code = COUNTRY_ALIASES[normalized] ?? normalized;
+    return TAX_BY_COUNTRY[code] ?? OTHER_COUNTRY_TAX;
   }
 
   /** Every country is taxed (unknown ones at the "other" rate), so this never returns null. */

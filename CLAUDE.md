@@ -214,7 +214,8 @@ Order:
 - Percentages compound on the running total in the order above.
 - Shipping is not subject to the percentage rules.
 - Thresholds are strict: "greater than" and "exceeds" both exclude the boundary value.
-- Country matching is case-insensitive on a normalized code (`USA`, `BOLIVIA`, `INDIA`), after trimming whitespace. Aliases like `US` or `United States` are "other" (15%).
+- Country matching is case-insensitive on a normalized code (`USA`, `BOLIVIA`, `INDIA`), after trimming whitespace.
+- `US`, `U.S.`, `United States` and `United States of America` are aliases for `USA` (same case-insensitive, trimmed matching). Bolivia and India match their exact names only. Anything else, including `U.S.A.`, is "other" (15%). (Mike, 2026-11-21.)
 - The Air bulk discount is **its own line item**, right after the full air charge: `Air shipping (1001 x $30)` +$30,030.00, then `Air bulk discount (15%)` -$4,504.50. Shipping lines stay last and untaxed. (Mike, 2026-11-21; replaces the earlier single net line.)
 
 ### Money

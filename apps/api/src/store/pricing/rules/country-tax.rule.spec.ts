@@ -25,10 +25,39 @@ describe('CountryTaxRule', () => {
     },
   );
 
-  it('treats aliases that are not the normalized code as other countries', () => {
-    expect(CountryTaxRule.taxFor('United States').percent).toBe(15);
-    expect(CountryTaxRule.taxFor('US').percent).toBe(15);
+  describe('USA aliases', () => {
+    it.each([
+      'US',
+      'U.S.',
+      'United States',
+      'United States of America',
+      // case-insensitive, after trimming
+      'us',
+      ' u.s. ',
+      'UNITED STATES',
+      '  united states of america  ',
+    ])('"%s" is taxed as USA at 18%%', (country) => {
+      expect(rule.apply(makeContext({ country, runningTotalCents }))).toEqual({
+        label: 'USA tax (18%)',
+        amountCents: 32_076,
+        type: 'charge',
+      });
+    });
+
+    it.each(['U.S.A.', 'America', 'U S', 'United States of Mexico'])(
+      '"%s" is not a listed alias, so it is an other country (15%%)',
+      (country) => {
+        expect(CountryTaxRule.taxFor(country)).toEqual({ name: 'Other country', percent: 15 });
+      },
+    );
   });
+
+  it.each(['Plurinational State of Bolivia', 'Republic of India', 'Bharat', 'BO', 'IN'])(
+    'Bolivia and India match exact names only: "%s" is an other country',
+    (country) => {
+      expect(CountryTaxRule.taxFor(country).percent).toBe(15);
+    },
+  );
 
   it('rounds tax half-up', () => {
     // 13% of $1.50 = $0.195 -> $0.20
