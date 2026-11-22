@@ -84,7 +84,7 @@ If a non-deleted duck exists with the same color, size and price, add the new qu
 - Deleted ducks are **ignored** when matching (they stay as history).
 - Response indicates whether it merged or created, so the UI can say so: `{ duck, merged }`.
 - Runs in one transaction. If several non-deleted ducks match (see the race below), the lowest id wins.
-- **Accepted race:** two concurrent adds of a combination that doesn't exist yet can both miss the lookup and create twins. There is no unique index to stop it, because price is a DOUBLE and deleted ducks share the same values. We accept this: it needs two simultaneous adds of the same new duck, and editing either twin later merges them via the edit collision rule.
+- **Accepted race:** two concurrent adds of a combination that doesn't exist yet can both miss the lookup and create twins. A unique index could prevent duplicates: DOUBLE equality is reliable here because prices are capped at 2 decimal places, and a generated column that is NULL when deleted = true would let soft-deleted rows share values (MySQL allows multiple NULLs in a unique index). We chose not to because Prisma doesn't model generated columns, so it would need hand-written migration SQL for a rare edge case. Instead the race is accepted, and if two simultaneous adds create twins, the next edit of either one merges them.
 
 ### Edit collision
 If editing a duck (A) would make it identical (color, size, price) to another non-deleted duck (B), **auto-merge**, mirroring the add rule:
