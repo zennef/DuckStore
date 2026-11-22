@@ -1,14 +1,17 @@
+import { useState } from 'react';
 import { useDucks } from '../../api/ducks';
 import type { Duck } from '../../api/types';
 import { PlusIcon } from '../../components/icons';
+import { DuckForm } from './DuckForm';
 import { DuckTable } from './DuckTable';
+
+type OpenDialog = { kind: 'add' } | { kind: 'edit'; duck: Duck } | { kind: 'delete'; duck: Duck };
 
 export function WarehousePage() {
   const ducks = useDucks();
-
-  const openAdd = () => {};
-  const openEdit = (_duck: Duck) => {};
-  const openDelete = (_duck: Duck) => {};
+  const [dialog, setDialog] = useState<OpenDialog | null>(null);
+  const close = () => setDialog(null);
+  const openAdd = () => setDialog({ kind: 'add' });
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -58,9 +61,18 @@ export function WarehousePage() {
             </button>
           </div>
         ) : (
-          <DuckTable ducks={ducks.data} onEdit={openEdit} onDelete={openDelete} />
+          <DuckTable
+            ducks={ducks.data}
+            onEdit={(duck) => setDialog({ kind: 'edit', duck })}
+            onDelete={(duck) => setDialog({ kind: 'delete', duck })}
+          />
         )}
       </section>
+
+      {dialog?.kind === 'add' && <DuckForm mode="create" onClose={close} onSaved={close} />}
+      {dialog?.kind === 'edit' && (
+        <DuckForm mode="edit" duck={dialog.duck} onClose={close} onSaved={close} onStale={close} />
+      )}
     </div>
   );
 }
