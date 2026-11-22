@@ -92,7 +92,7 @@ If editing a duck (A) would make it identical (color, size, price) to another no
 - Soft-delete A so it stays in history. A keeps its pre-edit price and quantity, so history shows what it was before the merge.
 - Return B, with a flag indicating a merge happened so the UI can say so: `{ duck: B, merged: true }`. A plain edit returns `{ duck: A, merged: false }`.
 - Do all of this in one transaction. If several ducks qualify as B, the lowest id wins.
-- The transaction starts with `SELECT ... FOR UPDATE` on A, so a concurrent `decrementStock` waits, then applies to fresh data or returns 409 if A was merged away. A plain edit writes only the fields in the body.
+- The transaction starts with `SELECT ... FOR UPDATE` on A, so a concurrent `decrementStock` waits, then applies to fresh data or returns 409 if A was merged away or its price changed. A plain edit writes only the fields in the body.
 - Two simultaneous edits that move ducks onto each other's prices (A to B's price while B goes to A's) can deadlock: each holds its own row lock and waits on the other's. MySQL rolls one back, and the global `PrismaConflictFilter` maps Prisma's P2034 (write conflict or deadlock) to **409** "Conflicting update, please retry".
 - Editing a missing or deleted duck is a 404.
 
@@ -110,6 +110,8 @@ If editing a duck (A) would make it identical (color, size, price) to another no
 ### CRUD
 `StoreModule` imports `DucksService`. No duplicated CRUD logic. Store exposes its own routes under `/api/store/ducks` (GET, POST, PATCH, DELETE) that delegate to the same service, so the Store module visibly has the CRUD endpoints the spec asks for.
 
+Both `DucksController` (`/api/ducks`) and `StoreDucksController` (`/api/store/ducks`) extend the abstract `DuckCrudController`, which holds the handlers. So the two paths share the same DTOs, status codes and response shapes, and each subclass only declares its path.
+
 ### Order endpoint
 `POST /api/store/orders`
 
@@ -118,31 +120,36 @@ Request:
 { "color": "Green", "size": "Medium", "quantity": 150, "country": "USA", "shippingMode": "AIR" }
 ```
 
-Response:
+Response (201):
 ```json
 {
+  "duckId": 3,
   "packageType": "CARDBOARD",
   "protection": ["POLYSTYRENE_BALLS"],
   "lineItems": [
-    { "label": "Base cost (150 x $15.00)", "amount": 2250.00 },
-    { "label": "Volume discount (20%)",    "amount": -450.00 },
-    { "label": "Cardboard discount (1%)",  "amount": -18.00 },
-    { "label": "USA tax (18%)",            "amount": 320.76 },
-    { "label": "Air shipping (150 x $30)", "amount": 4500.00 }
+    { "label": "Base cost (150 x $15.00)", "amount": 2250.00, "type": "charge" },
+    { "label": "Volume discount (20%)",    "amount": -450.00, "type": "discount" },
+    { "label": "Cardboard discount (1%)",  "amount": -18.00,  "type": "discount" },
+    { "label": "USA tax (18%)",            "amount": 320.76,  "type": "charge" },
+    { "label": "Air shipping (150 x $30)", "amount": 4500.00, "type": "charge" }
   ],
   "total": 6602.76
 }
 ```
 
-The response also includes `"duckId"` (the duck the order drew from).
+`duckId` is the duck the order drew from. Line items are the internal `LineItem` with `amountCents` converted to dollars as `amount`, so the response stays in one unit with `total`.
+
+Validation: color, size and shippingMode are enums, quantity a positive integer, country a string that is non-empty after trimming.
+
+Flow (`OrdersService.place`): `findCheapestMatch`, then packaging and the pricing pipeline (both pure, so they run before any write), then `decrementStock`. If the decrement loses a race, its 409 is returned and nothing else has happened. Lock conflicts are mapped to 409 by the global `PrismaConflictFilter`, with no order-specific handling.
 
 ### Which duck an order uses
 Orders only give color and size, but several ducks can share those at different prices. Use the **lowest-priced** non-deleted match with enough quantity, lowest id as a tiebreak. Return 404 if no non-deleted duck has that color and size, 409 if none has enough stock. This is `DucksService.findCheapestMatch`.
 
 ### Stock
 Placing an order **decrements** the chosen duck's quantity. (Interpretation call: the spec calls it an order, and a real order consumes stock.)
-- Decrement atomically with a conditional update (`WHERE id = ? AND deleted = false AND quantity >= ?`), in `DucksService.decrementStock`. If zero rows update, another order (or a delete) got there first: return 409. Don't retry with another duck.
-- Pricing is computed from the same duck record that was decremented.
+- Decrement atomically with a conditional update (`WHERE id = ? AND price = ? AND deleted = false AND quantity >= ?`), in `DucksService.decrementStock`, which takes the duck returned by `findCheapestMatch`. If zero rows update, another order, a price edit or a delete got there first: return 409 "Duck N changed or no longer has Q in stock, please retry". Don't retry with another duck.
+- Pricing is computed from the same duck record that was decremented. The price condition makes that true: if the price was edited after `findCheapestMatch`, the order is refused rather than charged the old price. Exact DOUBLE equality is safe because the price is the stored value read back unchanged.
 
 ---
 

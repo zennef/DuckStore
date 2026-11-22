@@ -186,22 +186,20 @@ describe('Ducks (e2e)', () => {
     });
 
     it('does not lose concurrent stock decrements during price-only edits', async () => {
-      // Only one duck exists, so neither price collides with anything.
+      // The edits resend the current price: decrementStock requires the price it was given,
+      // so a real price change would (correctly) 409 the decrements that follow it. Each
+      // edit is still price-only, which is what used to write a stale quantity back.
       const duck = await seed({ quantity: 1000, price: 20 });
       const ducks = app.get(DucksService);
 
-      const decrements = Array.from({ length: 20 }, () => ducks.decrementStock(duck.id, 10));
-      const edits = Array.from({ length: 20 }, (_, i) =>
-        api()
-          .patch(`/api/ducks/${duck.id}`)
-          .send({ price: i % 2 === 0 ? 21 : 22 })
-          .expect(200),
+      const decrements = Array.from({ length: 20 }, () => ducks.decrementStock(duck, 10));
+      const edits = Array.from({ length: 20 }, () =>
+        api().patch(`/api/ducks/${duck.id}`).send({ price: 20 }).expect(200),
       );
       await Promise.all([...decrements, ...edits]);
 
       const final = await prisma.duck.findUniqueOrThrow({ where: { id: duck.id } });
-      expect(final).toMatchObject({ quantity: 800, deleted: false });
-      expect([21, 22]).toContain(final.price);
+      expect(final).toMatchObject({ quantity: 800, price: 20, deleted: false });
     });
   });
 

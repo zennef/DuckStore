@@ -76,18 +76,36 @@ describe('DucksService', () => {
   });
 
   describe('decrementStock', () => {
-    it('decrements with a conditional update on id, deleted and stock', async () => {
+    it('throws 409 asking for a retry when the price no longer matches', async () => {
+      // The WHERE includes the price the order was priced at, so a price edit since then
+      // makes the update match zero rows.
+      updateMany.mockResolvedValue({ count: 0 });
+      const priced = duck({ id: 3, price: 15 });
+
+      const attempt = service.decrementStock(priced, 40);
+      await expect(attempt).rejects.toThrow(ConflictException);
+      await expect(attempt).rejects.toThrow(
+        'Duck 3 changed or no longer has 40 in stock, please retry',
+      );
+      expect(updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ id: 3, price: 15 }) }),
+      );
+    });
+
+    it('decrements with a conditional update on id, price, deleted and stock', async () => {
       updateMany.mockResolvedValue({ count: 1 });
-      await expect(service.decrementStock(3, 40)).resolves.toBeUndefined();
+      await expect(
+        service.decrementStock(duck({ id: 3, price: 15 }), 40),
+      ).resolves.toBeUndefined();
       expect(updateMany).toHaveBeenCalledWith({
-        where: { id: 3, deleted: false, quantity: { gte: 40 } },
+        where: { id: 3, price: 15, deleted: false, quantity: { gte: 40 } },
         data: { quantity: { decrement: 40 } },
       });
     });
 
     it('throws 409 when zero rows update, without trying another duck', async () => {
       updateMany.mockResolvedValue({ count: 0 });
-      await expect(service.decrementStock(3, 40)).rejects.toThrow(ConflictException);
+      await expect(service.decrementStock(duck({ id: 3 }), 40)).rejects.toThrow(ConflictException);
       expect(updateMany).toHaveBeenCalledTimes(1);
       expect(findMany).not.toHaveBeenCalled();
     });
