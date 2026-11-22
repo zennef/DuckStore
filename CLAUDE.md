@@ -83,7 +83,11 @@ If a non-deleted duck exists with the same color, size and price, add the new qu
 - Response indicates whether it merged or created, so the UI can say so.
 
 ### Edit collision
-If editing a duck's price would make it identical (color, size, price) to another non-deleted duck: **reject with 409** and a clear message. **[CONFIRM]** Alternative is to merge them automatically.
+If editing a duck (A) would make it identical (color, size, price) to another non-deleted duck (B), **auto-merge**, mirroring the add rule:
+- Add A's (edited) quantity to B.
+- Soft-delete A so it stays in history.
+- Return B, with a flag indicating a merge happened so the UI can say so.
+- Do all of this in one transaction.
 
 ### Frontend
 - Layout per mockup: top bar "Duck Store Platform", sidebar (Warehouse, Store), page header "Duck Warehouse" with subtitle, "+ Add Duck" button top right, "Duck Inventory" card with table.
@@ -97,7 +101,7 @@ If editing a duck's price would make it identical (color, size, price) to anothe
 ## Store module
 
 ### CRUD
-`StoreModule` imports `DucksService`. No duplicated CRUD logic. **[CONFIRM]** Whether to also expose `/api/store/ducks` routes that delegate to the same service, in case reviewers expect Store to have its own CRUD endpoints.
+`StoreModule` imports `DucksService`. No duplicated CRUD logic. Store exposes its own routes under `/api/store/ducks` (GET, POST, PATCH, DELETE) that delegate to the same service, so the Store module visibly has the CRUD endpoints the spec asks for.
 
 ### Order endpoint
 `POST /api/store/orders`
@@ -123,11 +127,15 @@ Response:
 }
 ```
 
-### Which duck an order uses **[CONFIRM]**
-Orders only give color and size, but several ducks can share those at different prices. Default: use the **lowest-priced** non-deleted match with enough quantity. Return 404 if no match, 409 if not enough stock.
+The response also includes `"duckId"` (the duck the order drew from).
 
-### Stock **[CONFIRM]**
-Default: the endpoint validates stock but **does not decrement it**. It behaves as a quote. Spec doesn't mention inventory changes.
+### Which duck an order uses
+Orders only give color and size, but several ducks can share those at different prices. Use the **lowest-priced** non-deleted match with enough quantity. Return 404 if no match exists, 409 if no match has enough stock.
+
+### Stock
+Placing an order **decrements** the chosen duck's quantity. (Interpretation call: the spec calls it an order, and a real order consumes stock.)
+- Decrement atomically with a conditional update (`WHERE id = ? AND quantity >= ?`). If zero rows update, another order got there first: return 409.
+- Pricing is computed from the same duck record that was decremented.
 
 ---
 
@@ -182,7 +190,7 @@ Order:
    - AIR: +$30 per unit, with 15% off the air cost if quantity **> 1000** (1001+)
 
 **Interpretation calls:**
-- Percentages compound on the running total in the order above. **[CONFIRM]**
+- Percentages compound on the running total in the order above.
 - Shipping is not subject to the percentage rules.
 - Thresholds are strict: "greater than" and "exceeds" both exclude the boundary value.
 - Country matching is case-insensitive on a normalized code (`USA`, `BOLIVIA`, `INDIA`).
@@ -207,7 +215,7 @@ Order:
 ## Testing priorities
 1. Every pricing rule in isolation, plus pipeline worked examples.
 2. Packaging: every size x mode combination.
-3. Merge-on-add, soft delete, edit restrictions (API e2e).
+3. Merge-on-add, merge-on-edit, soft delete, edit restrictions, order stock decrement and the oversell 409 (API e2e).
 4. DuckForm create vs edit behavior (web).
 
 ---
@@ -215,6 +223,7 @@ Order:
 ## Working agreement
 - Small, focused commits. One concern per commit.
 - When introducing a design pattern, add a short comment on **why** it fits here.
-- Don't change anything marked **[CONFIRM]** or the interpretation calls without asking Mike.
+- Don't change the interpretation calls without asking Mike.
+- If a decision changes while building, update this file in the same commit.
 - Don't add libraries beyond the stack above without asking.
 - No em dashes in docs, comments or UI copy.

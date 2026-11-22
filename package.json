@@ -1,0 +1,26 @@
+{
+  "name": "duck-store",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:migrate": "npm run prisma:migrate -w @duck-store/api",
+    "db:seed": "npm run prisma:seed -w @duck-store/api",
+    "db:setup": "npm run db:up && npm run db:migrate && npm run db:seed",
+    "dev": "concurrently -k -n api,web -c blue,green \"npm run start:dev -w @duck-store/api\" \"npm run dev -w @duck-store/web\"",
+    "dev:api": "npm run start:dev -w @duck-store/api",
+    "dev:web": "npm run dev -w @duck-store/web",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "test:e2e": "npm run test:e2e -w @duck-store/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
