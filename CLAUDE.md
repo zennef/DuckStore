@@ -110,6 +110,8 @@ If editing a duck (A) would make it identical (color, size, price) to another no
 ### CRUD
 `StoreModule` imports `DucksService`. No duplicated CRUD logic. Store exposes its own routes under `/api/store/ducks` (GET, POST, PATCH, DELETE) that delegate to the same service, so the Store module visibly has the CRUD endpoints the spec asks for.
 
+Both `DucksController` (`/api/ducks`) and `StoreDucksController` (`/api/store/ducks`) extend the abstract `DuckCrudController`, which holds the handlers. So the two paths share the same DTOs, status codes and response shapes, and each subclass only declares its path.
+
 ### Order endpoint
 `POST /api/store/orders`
 
