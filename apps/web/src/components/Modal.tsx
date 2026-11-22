@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 interface ModalProps {
   title: string;
@@ -17,17 +17,19 @@ interface ModalProps {
 export function Modal({ title, onClose, canClose = true, children }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  // Read during the first render: by the time effects run, React has already applied any
+  // autoFocus inside the dialog, so document.activeElement would no longer be the trigger.
+  const [trigger] = useState(() => document.activeElement);
 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    const trigger = document.activeElement;
     dialog.showModal();
     return () => {
       dialog.close();
       if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus();
     };
-  }, []);
+  }, [trigger]);
 
   return (
     <dialog
