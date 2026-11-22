@@ -10,4 +10,6 @@ export interface ShippingStrategy {
   getProtection(material: PackageMaterial): Protection[];
   /** Total shipping cost for the order, in integer cents. */
   getShippingCost(quantity: number): number;
+  /** Line item label for the shipping charge, including any mode-specific discount. */
+  getShippingLabel(quantity: number): string;
 }

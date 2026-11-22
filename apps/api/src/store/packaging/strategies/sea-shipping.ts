@@ -13,4 +13,8 @@ export class SeaShipping implements ShippingStrategy {
   getShippingCost(_quantity: number): number {
     return SeaShipping.FLAT_COST_CENTS;
   }
+
+  getShippingLabel(_quantity: number): string {
+    return `Sea shipping (flat $${SeaShipping.FLAT_COST_CENTS / 100})`;
+  }
 }

@@ -55,6 +55,18 @@ describe('Shipping strategies', () => {
     });
   });
 
+  describe('shipping labels', () => {
+    it.each([
+      [new AirShipping(), 150, 'Air shipping (150 x $30)'],
+      [new AirShipping(), 1000, 'Air shipping (1000 x $30)'],
+      [new AirShipping(), 1001, 'Air shipping (1001 x $30, 15% bulk discount)'],
+      [new LandShipping(), 150, 'Land shipping (150 x $10)'],
+      [new SeaShipping(), 150, 'Sea shipping (flat $400)'],
+    ])('%p for %i units -> %s', (strategy, quantity, label) => {
+      expect(strategy.getShippingLabel(quantity)).toBe(label);
+    });
+  });
+
   describe('ShippingStrategyRegistry', () => {
     it.each([ShippingMode.AIR, ShippingMode.LAND, ShippingMode.SEA])(
       'returns the %s strategy',
@@ -73,6 +85,7 @@ describe('Shipping strategies', () => {
         mode: ShippingMode.LAND,
         getProtection: () => [],
         getShippingCost: () => 1,
+        getShippingLabel: () => 'Custom',
       };
       expect(new ShippingStrategyRegistry([custom]).get(ShippingMode.LAND)).toBe(custom);
     });

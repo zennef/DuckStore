@@ -13,4 +13,8 @@ export class LandShipping implements ShippingStrategy {
   getShippingCost(quantity: number): number {
     return quantity * LandShipping.COST_PER_UNIT_CENTS;
   }
+
+  getShippingLabel(quantity: number): string {
+    return `Land shipping (${quantity} x $${LandShipping.COST_PER_UNIT_CENTS / 100})`;
+  }
 }

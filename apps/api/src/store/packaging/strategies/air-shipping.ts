@@ -23,4 +23,11 @@ export class AirShipping implements ShippingStrategy {
     // Exact in integer cents: the per-unit rate is a multiple of 100, so 85% of it is whole.
     return (baseCents * (100 - AirShipping.BULK_DISCOUNT_PERCENT)) / 100;
   }
+
+  getShippingLabel(quantity: number): string {
+    const rate = `${quantity} x $${AirShipping.COST_PER_UNIT_CENTS / 100}`;
+    return quantity > AirShipping.BULK_THRESHOLD
+      ? `Air shipping (${rate}, ${AirShipping.BULK_DISCOUNT_PERCENT}% bulk discount)`
+      : `Air shipping (${rate})`;
+  }
 }

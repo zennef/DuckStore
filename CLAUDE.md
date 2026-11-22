@@ -156,6 +156,7 @@ interface ShippingStrategy {
   mode: ShippingMode;
   getProtection(material: PackageMaterial): Protection[];
   getShippingCost(quantity: number): number; // integer cents
+  getShippingLabel(quantity: number): string; // line item label, mentions any mode discount
 }
 ```
 
@@ -174,10 +175,27 @@ Classes: `AirShipping`, `LandShipping`, `SeaShipping` in `packaging/strategies/`
 Each rule is a small class:
 
 ```ts
+interface PricingContext {
+  quantity: number;
+  unitPriceCents: number;
+  material: PackageMaterial;
+  country: string;            // raw input; CountryTaxRule normalizes it
+  shipping: ShippingStrategy;
+  runningTotalCents: number;  // sum of line items from earlier rules
+}
+
+interface LineItem {
+  label: string;
+  amountCents: number;        // signed: negative for discounts
+  type: 'discount' | 'charge';
+}
+
 interface PricingRule {
   apply(ctx: PricingContext): LineItem | null; // null = rule doesn't apply
 }
 ```
+
+Rule classes in `pricing/rules/`: `BaseCostRule`, `VolumeDiscountRule`, `PackageAdjustmentRule`, `CountryTaxRule`, `ShippingCostRule`. `ShippingCostRule` delegates to `ctx.shipping` for both amount and label and does no shipping math itself. Money helpers (`toCents`, `percentOf`, `formatUsd`) live in `pricing/money.ts`.
 
 `PricingPipeline` runs rules **in order**, each against the **running total**, and collects line items.
 
@@ -195,11 +213,13 @@ Order:
 - Percentages compound on the running total in the order above.
 - Shipping is not subject to the percentage rules.
 - Thresholds are strict: "greater than" and "exceeds" both exclude the boundary value.
-- Country matching is case-insensitive on a normalized code (`USA`, `BOLIVIA`, `INDIA`).
+- Country matching is case-insensitive on a normalized code (`USA`, `BOLIVIA`, `INDIA`), after trimming whitespace. Aliases like `US` or `United States` are "other" (15%).
+- The Air bulk discount appears as **one net shipping line**, with the discount named in its label, e.g. `Air shipping (1001 x $30, 15% bulk discount)`. (Mike, 2026-11-21.)
 
 ### Money
 - Compute in **integer cents** internally.
 - Round each line item to the cent (half-up) so line items always sum exactly to the total.
+- Half-up applies to the **magnitude**, so discounts round away from zero too: a 1% discount on $12,345.50 is -$123.46, not -$123.45. (Mike, 2026-11-21.)
 
 ### Worked examples (must have tests)
 | Case | Expected total |
