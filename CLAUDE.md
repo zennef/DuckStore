@@ -59,13 +59,13 @@ Duck {
   id: number        // auto-increment
   color: Color
   size: Size
-  price: Decimal    // DECIMAL(10,2), not float
+  price: number     // DOUBLE, per spec, max 2 decimal places
   quantity: number
   deleted: boolean  // soft delete, default false
 }
 ```
 
-Spec says `Price: Double`. We store DECIMAL to avoid float equality bugs in the merge-on-add check.
+Price is stored as DOUBLE per the spec. DECIMAL is the usual choice for money, but we're following the requirement as written. To keep merge-on-add matching exact, prices must have at most 2 decimal places (validated with `@IsNumber({ maxDecimalPlaces: 2 })`), and all pricing math runs in integer cents.
 
 ---
 

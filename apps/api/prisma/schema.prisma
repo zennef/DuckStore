@@ -26,8 +26,8 @@ model Duck {
   id       Int     @id @default(autoincrement())
   color    Color
   size     Size
-  /// DECIMAL instead of the spec's Double so the merge-on-add price match is exact.
-  price    Decimal @db.Decimal(10, 2)
+  /// DOUBLE per the spec. Prices are validated to at most 2 decimal places so merge matching stays exact.
+  price    Float
   quantity Int
   deleted  Boolean @default(false)
 
