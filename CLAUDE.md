@@ -155,9 +155,11 @@ Placing an order **decrements** the chosen duck's quantity. (Interpretation call
 interface ShippingStrategy {
   mode: ShippingMode;
   getProtection(material: PackageMaterial): Protection[];
-  getShippingCost(quantity: number): Money;
+  getShippingCost(quantity: number): number; // integer cents
 }
 ```
+
+Classes: `AirShipping`, `LandShipping`, `SeaShipping` in `packaging/strategies/`. The Air bulk discount (15% off the air cost when quantity > 1000) lives only in `AirShipping`.
 
 | Mode | Protection |
 |------|------------|
@@ -165,7 +167,7 @@ interface ShippingStrategy {
 | LAND | Polystyrene balls |
 | SEA  | Moisture-absorbing beads + bubble wrap |
 
-Strategies are registered in a map keyed by mode. Adding a mode means adding one class, not editing a switch.
+`ShippingStrategyRegistry.get(mode)` looks strategies up in a map keyed by mode (it throws for an unregistered mode). Adding a mode means adding one class and registering it, not editing a switch.
 
 ## Pricing (Pipeline of rules)
 
