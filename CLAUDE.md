@@ -72,22 +72,29 @@ Price is stored as DOUBLE per the spec. DECIMAL is the usual choice for money, b
 ## Warehouse module
 
 ### API (`/api/ducks`)
-- `GET /api/ducks` returns non-deleted ducks, sorted by quantity **descending** (matches the mockup).
-- `POST /api/ducks` adds a duck (see merge rule).
-- `PATCH /api/ducks/:id` updates **price and quantity only**. Color and size in the body are rejected.
-- `DELETE /api/ducks/:id` sets `deleted = true`. Never a physical delete.
+- `GET /api/ducks` returns non-deleted ducks as a plain array, sorted by quantity **descending** (matches the mockup), then id ascending as a tiebreak.
+- `POST /api/ducks` adds a duck (see merge rule). Returns `{ duck, merged }`: **201** when it created a record, **200** when it merged into an existing one.
+- `PATCH /api/ducks/:id` updates **price and quantity only**. Both optional, at least one required. Color and size in the body are rejected (400, via the global `ValidationPipe` with `whitelist` and `forbidNonWhitelisted`).
+  - Quantity may be **0** on update (on create it must be 1+). An order can drain stock to 0 and the edit form must still save.
+- `DELETE /api/ducks/:id` sets `deleted = true`. Never a physical delete. Returns **204**, or 404 if the duck is missing or already deleted.
+- `PATCH` returns 200 with `{ duck, merged }` (see edit collision). A non-integer `:id` is a 400.
 
 ### Merge-on-add rule
 If a non-deleted duck exists with the same color, size and price, add the new quantity to it and return it. Otherwise create a new record.
 - Deleted ducks are **ignored** when matching (they stay as history).
-- Response indicates whether it merged or created, so the UI can say so.
+- Response indicates whether it merged or created, so the UI can say so: `{ duck, merged }`.
+- Runs in one transaction. If several non-deleted ducks match (see the race below), the lowest id wins.
+- **Accepted race:** two concurrent adds of a combination that doesn't exist yet can both miss the lookup and create twins. A unique index could prevent duplicates: DOUBLE equality is reliable here because prices are capped at 2 decimal places, and a generated column that is NULL when deleted = true would let soft-deleted rows share values (MySQL allows multiple NULLs in a unique index). We chose not to because Prisma doesn't model generated columns, so it would need hand-written migration SQL for a rare edge case. Instead the race is accepted, and if two simultaneous adds create twins, the next edit of either one merges them.
 
 ### Edit collision
 If editing a duck (A) would make it identical (color, size, price) to another non-deleted duck (B), **auto-merge**, mirroring the add rule:
 - Add A's (edited) quantity to B.
-- Soft-delete A so it stays in history.
-- Return B, with a flag indicating a merge happened so the UI can say so.
-- Do all of this in one transaction.
+- Soft-delete A so it stays in history. A keeps its pre-edit price and quantity, so history shows what it was before the merge.
+- Return B, with a flag indicating a merge happened so the UI can say so: `{ duck: B, merged: true }`. A plain edit returns `{ duck: A, merged: false }`.
+- Do all of this in one transaction. If several ducks qualify as B, the lowest id wins.
+- The transaction starts with `SELECT ... FOR UPDATE` on A, so a concurrent `decrementStock` waits, then applies to fresh data or returns 409 if A was merged away. A plain edit writes only the fields in the body.
+- Two simultaneous edits that move ducks onto each other's prices (A to B's price while B goes to A's) can deadlock: each holds its own row lock and waits on the other's. MySQL rolls one back, and the global `PrismaConflictFilter` maps Prisma's P2034 (write conflict or deadlock) to **409** "Conflicting update, please retry".
+- Editing a missing or deleted duck is a 404.
 
 ### Frontend
 - Layout per mockup: top bar "Duck Store Platform", sidebar (Warehouse, Store), page header "Duck Warehouse" with subtitle, "+ Add Duck" button top right, "Duck Inventory" card with table.
@@ -130,11 +137,11 @@ Response:
 The response also includes `"duckId"` (the duck the order drew from).
 
 ### Which duck an order uses
-Orders only give color and size, but several ducks can share those at different prices. Use the **lowest-priced** non-deleted match with enough quantity. Return 404 if no match exists, 409 if no match has enough stock.
+Orders only give color and size, but several ducks can share those at different prices. Use the **lowest-priced** non-deleted match with enough quantity, lowest id as a tiebreak. Return 404 if no non-deleted duck has that color and size, 409 if none has enough stock. This is `DucksService.findCheapestMatch`.
 
 ### Stock
 Placing an order **decrements** the chosen duck's quantity. (Interpretation call: the spec calls it an order, and a real order consumes stock.)
-- Decrement atomically with a conditional update (`WHERE id = ? AND quantity >= ?`). If zero rows update, another order got there first: return 409.
+- Decrement atomically with a conditional update (`WHERE id = ? AND deleted = false AND quantity >= ?`), in `DucksService.decrementStock`. If zero rows update, another order (or a delete) got there first: return 409. Don't retry with another duck.
 - Pricing is computed from the same duck record that was decremented.
 
 ---
@@ -247,6 +254,8 @@ All live in `pricing/pricing.pipeline.spec.ts`, along with an invariant check ac
 2. Packaging: every size x mode combination.
 3. Merge-on-add, merge-on-edit, soft delete, edit restrictions, order stock decrement and the oversell 409 (API e2e).
 4. DuckForm create vs edit behavior (web).
+
+API e2e tests run against a separate database: `TEST_DATABASE_URL` if set, otherwise `DATABASE_URL` with `_test` appended to the database name (`duck_store_test`). Jest's global setup creates it and applies migrations with `prisma migrate deploy`; each test truncates `ducks` first. Docker must be running.
 
 ---
 
