@@ -93,6 +93,7 @@ If editing a duck (A) would make it identical (color, size, price) to another no
 - Return B, with a flag indicating a merge happened so the UI can say so: `{ duck: B, merged: true }`. A plain edit returns `{ duck: A, merged: false }`.
 - Do all of this in one transaction. If several ducks qualify as B, the lowest id wins.
 - The transaction starts with `SELECT ... FOR UPDATE` on A, so a concurrent `decrementStock` waits, then applies to fresh data or returns 409 if A was merged away. A plain edit writes only the fields in the body.
+- Two simultaneous edits that move ducks onto each other's prices (A to B's price while B goes to A's) can deadlock: each holds its own row lock and waits on the other's. MySQL rolls one back, and the global `PrismaConflictFilter` maps Prisma's P2034 (write conflict or deadlock) to **409** "Conflicting update, please retry".
 - Editing a missing or deleted duck is a 404.
 
 ### Frontend
