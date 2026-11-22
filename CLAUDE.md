@@ -155,9 +155,12 @@ Placing an order **decrements** the chosen duck's quantity. (Interpretation call
 interface ShippingStrategy {
   mode: ShippingMode;
   getProtection(material: PackageMaterial): Protection[];
-  getShippingCost(quantity: number): Money;
+  // The charge first, then any mode discount as its own line. Integer cents, never empty.
+  getShippingLineItems(quantity: number): LineItem[];
 }
 ```
+
+Classes: `AirShipping`, `LandShipping`, `SeaShipping` in `packaging/strategies/`. The Air bulk discount (15% off the air cost when quantity > 1000) lives only in `AirShipping`, which then returns two lines: `Air shipping (N x $30)` at the full amount and `Air bulk discount (15%)` as a discount, rounded half-up via `percentOf`. `LineItem` lives in `store/line-item.ts` so packaging and pricing share it.
 
 | Mode | Protection |
 |------|------------|
@@ -165,19 +168,37 @@ interface ShippingStrategy {
 | LAND | Polystyrene balls |
 | SEA  | Moisture-absorbing beads + bubble wrap |
 
-Strategies are registered in a map keyed by mode. Adding a mode means adding one class, not editing a switch.
+`ShippingStrategyRegistry.get(mode)` looks strategies up in a map keyed by mode (it throws for an unregistered mode). Adding a mode means adding one class and registering it, not editing a switch.
 
 ## Pricing (Pipeline of rules)
 
 Each rule is a small class:
 
 ```ts
+interface PricingContext {
+  quantity: number;
+  unitPriceCents: number;
+  material: PackageMaterial;
+  country: string;            // raw input; CountryTaxRule normalizes it
+  shipping: ShippingStrategy;
+  runningTotalCents: number;  // sum of line items from earlier rules
+}
+
+interface LineItem {
+  label: string;
+  amountCents: number;        // signed: negative for discounts
+  type: 'discount' | 'charge';
+}
+
 interface PricingRule {
-  apply(ctx: PricingContext): LineItem | null; // null = rule doesn't apply
+  // One item, several items (shipping plus its discount), or null when the rule doesn't apply.
+  apply(ctx: PricingContext): LineItem | LineItem[] | null;
 }
 ```
 
-`PricingPipeline` runs rules **in order**, each against the **running total**, and collects line items.
+Rule classes in `pricing/rules/`: `BaseCostRule`, `VolumeDiscountRule`, `PackageAdjustmentRule`, `CountryTaxRule`, `ShippingCostRule`. `ShippingCostRule` returns `ctx.shipping.getShippingLineItems(quantity)` as is and does no shipping math itself. Money helpers (`toCents`, `percentOf`, `formatUsd`) live in `pricing/money.ts`.
+
+`PricingPipeline.run(input)` runs rules **in order**, each against the **running total**, skips rules that return null, and returns `{ lineItems, totalCents }`. `input` is a `PricingContext` without `runningTotalCents`; the pipeline starts it at 0.
 
 Order:
 1. Base: quantity x price
@@ -193,17 +214,26 @@ Order:
 - Percentages compound on the running total in the order above.
 - Shipping is not subject to the percentage rules.
 - Thresholds are strict: "greater than" and "exceeds" both exclude the boundary value.
-- Country matching is case-insensitive on a normalized code (`USA`, `BOLIVIA`, `INDIA`).
+- Country matching is case-insensitive on a normalized code (`USA`, `BOLIVIA`, `INDIA`), after trimming whitespace.
+- `US`, `U.S.`, `U.S.A.`, `USA.`, `United States` and `United States of America` are aliases for `USA` (same case-insensitive, trimmed matching). Bolivia and India match their exact names only. Anything else, such as `America`, is "other" (15%). (Mike, 2026-11-21.)
+- The Air bulk discount is **its own line item**, right after the full air charge: `Air shipping (1001 x $30)` +$30,030.00, then `Air bulk discount (15%)` -$4,504.50. Shipping lines stay last and untaxed. (Mike, 2026-11-21; replaces the earlier single net line.)
 
 ### Money
 - Compute in **integer cents** internally.
 - Round each line item to the cent (half-up) so line items always sum exactly to the total.
+- Half-up applies to the **magnitude**, so discounts round away from zero too: a 1% discount on $12,345.50 is -$123.46, not -$123.45. (Mike, 2026-11-21.)
 
 ### Worked examples (must have tests)
 | Case | Expected total |
 |------|----------------|
 | 150 Medium @ $15, USA, AIR | $6,602.76 |
-| Add more as we go, including boundaries at 100/101 and 1000/1001 | |
+| 100 Large @ $20, Bolivia, LAND (no volume discount) | $3,373.00 |
+| 101 Large @ $20, Bolivia, LAND (volume discount) | $2,927.38 |
+| 1000 Small @ $10, India, AIR (no air discount) | $40,472.00 |
+| 1001 Small @ $10, Mexico, AIR (15% off air) | $35,655.62 |
+| 50 XSmall @ $8, "usa", SEA (lower-case country) | $919.20 |
+
+All live in `pricing/pricing.pipeline.spec.ts`, along with an invariant check across 2,000+ orders that line items sum exactly to the total.
 
 ---
 
