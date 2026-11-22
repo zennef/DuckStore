@@ -120,23 +120,28 @@ Request:
 { "color": "Green", "size": "Medium", "quantity": 150, "country": "USA", "shippingMode": "AIR" }
 ```
 
-Response:
+Response (201):
 ```json
 {
+  "duckId": 3,
   "packageType": "CARDBOARD",
   "protection": ["POLYSTYRENE_BALLS"],
   "lineItems": [
-    { "label": "Base cost (150 x $15.00)", "amount": 2250.00 },
-    { "label": "Volume discount (20%)",    "amount": -450.00 },
-    { "label": "Cardboard discount (1%)",  "amount": -18.00 },
-    { "label": "USA tax (18%)",            "amount": 320.76 },
-    { "label": "Air shipping (150 x $30)", "amount": 4500.00 }
+    { "label": "Base cost (150 x $15.00)", "amount": 2250.00, "type": "charge" },
+    { "label": "Volume discount (20%)",    "amount": -450.00, "type": "discount" },
+    { "label": "Cardboard discount (1%)",  "amount": -18.00,  "type": "discount" },
+    { "label": "USA tax (18%)",            "amount": 320.76,  "type": "charge" },
+    { "label": "Air shipping (150 x $30)", "amount": 4500.00, "type": "charge" }
   ],
   "total": 6602.76
 }
 ```
 
-The response also includes `"duckId"` (the duck the order drew from).
+`duckId` is the duck the order drew from. Line items are the internal `LineItem` with `amountCents` converted to dollars as `amount`, so the response stays in one unit with `total`.
+
+Validation: color, size and shippingMode are enums, quantity a positive integer, country a string that is non-empty after trimming.
+
+Flow (`OrdersService.place`): `findCheapestMatch`, then packaging and the pricing pipeline (both pure, so they run before any write), then `decrementStock`. If the decrement loses a race, its 409 is returned and nothing else has happened. Lock conflicts are mapped to 409 by the global `PrismaConflictFilter`, with no order-specific handling.
 
 ### Which duck an order uses
 Orders only give color and size, but several ducks can share those at different prices. Use the **lowest-priced** non-deleted match with enough quantity, lowest id as a tiebreak. Return 404 if no non-deleted duck has that color and size, 409 if none has enough stock. This is `DucksService.findCheapestMatch`.
