@@ -1,4 +1,6 @@
+import { ConflictException } from '@nestjs/common';
 import { Color, Size } from '@prisma/client';
+import { DucksService } from '../src/ducks/ducks.service';
 import { createTestApp, TestApp } from './helpers/test-app';
 
 describe('Orders (e2e)', () => {
@@ -118,6 +120,17 @@ describe('Orders (e2e)', () => {
     const remaining = await quantityOf(duck.id);
     expect(remaining).toBe(40);
     expect(remaining).toBeGreaterThanOrEqual(0);
+  });
+
+  it('refuses to take stock at a price the duck no longer has', async () => {
+    const seeded = await t.seed({ color: Color.Green, size: Size.Medium, price: 15, quantity: 500 });
+    const ducks = t.app.get(DucksService);
+
+    const priced = await ducks.findCheapestMatch(Color.Green, Size.Medium, 150);
+    await t.api().patch(`/api/ducks/${seeded.id}`).send({ price: 17 }).expect(200);
+
+    await expect(ducks.decrementStock(priced, 150)).rejects.toThrow(ConflictException);
+    expect(await quantityOf(seeded.id)).toBe(500);
   });
 
   it('applies USA tax to the "US" alias', async () => {

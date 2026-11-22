@@ -62,7 +62,7 @@ export class DucksService {
     return this.prisma.$transaction(async (tx) => {
       // Lock A's row first. A concurrent decrementStock then waits on the lock and
       // re-evaluates its WHERE once we commit, so it either applies to fresh data or
-      // returns 409 if A was merged away. Without the lock, a decrement landing between
+      // returns 409 if A was merged away or its price changed. Without the lock, a decrement landing between
       // our read and write would be overwritten and the ordered units would reappear.
       const locked = await tx.$queryRaw<{ id: number }[]>`
         SELECT id FROM ducks WHERE id = ${id} AND deleted = false FOR UPDATE`;
@@ -135,18 +135,22 @@ export class DucksService {
   }
 
   /**
-   * Atomically takes `quantity` units from a duck. The conditional update only succeeds
-   * if the duck is still non-deleted with enough stock, so concurrent orders can't
-   * oversell. Zero rows updated means another order (or a delete) got there first: 409.
-   * The caller must not retry with a different duck, since its price was already chosen.
+   * Atomically takes `quantity` units from the duck the caller priced. The conditional
+   * update only succeeds if that duck is still non-deleted, still at the price the caller
+   * read, and has enough stock. So concurrent orders can't oversell, and an order is never
+   * charged a price the duck no longer has. Zero rows updated means another order, an
+   * edit or a delete got there first: 409. The caller must not retry with another duck.
    */
-  async decrementStock(id: number, quantity: number): Promise<void> {
+  async decrementStock(duck: Pick<Duck, 'id' | 'price'>, quantity: number): Promise<void> {
     const { count } = await this.prisma.duck.updateMany({
-      where: { id, deleted: false, quantity: { gte: quantity } },
+      // Exact DOUBLE equality is safe: the price is the stored value read back unchanged.
+      where: { id: duck.id, price: duck.price, deleted: false, quantity: { gte: quantity } },
       data: { quantity: { decrement: quantity } },
     });
     if (count === 0) {
-      throw new ConflictException(`Duck ${id} no longer has ${quantity} in stock`);
+      throw new ConflictException(
+        `Duck ${duck.id} changed or no longer has ${quantity} in stock, please retry`,
+      );
     }
   }
 }

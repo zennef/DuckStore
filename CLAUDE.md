@@ -92,7 +92,7 @@ If editing a duck (A) would make it identical (color, size, price) to another no
 - Soft-delete A so it stays in history. A keeps its pre-edit price and quantity, so history shows what it was before the merge.
 - Return B, with a flag indicating a merge happened so the UI can say so: `{ duck: B, merged: true }`. A plain edit returns `{ duck: A, merged: false }`.
 - Do all of this in one transaction. If several ducks qualify as B, the lowest id wins.
-- The transaction starts with `SELECT ... FOR UPDATE` on A, so a concurrent `decrementStock` waits, then applies to fresh data or returns 409 if A was merged away. A plain edit writes only the fields in the body.
+- The transaction starts with `SELECT ... FOR UPDATE` on A, so a concurrent `decrementStock` waits, then applies to fresh data or returns 409 if A was merged away or its price changed. A plain edit writes only the fields in the body.
 - Two simultaneous edits that move ducks onto each other's prices (A to B's price while B goes to A's) can deadlock: each holds its own row lock and waits on the other's. MySQL rolls one back, and the global `PrismaConflictFilter` maps Prisma's P2034 (write conflict or deadlock) to **409** "Conflicting update, please retry".
 - Editing a missing or deleted duck is a 404.
 
@@ -148,8 +148,8 @@ Orders only give color and size, but several ducks can share those at different 
 
 ### Stock
 Placing an order **decrements** the chosen duck's quantity. (Interpretation call: the spec calls it an order, and a real order consumes stock.)
-- Decrement atomically with a conditional update (`WHERE id = ? AND deleted = false AND quantity >= ?`), in `DucksService.decrementStock`. If zero rows update, another order (or a delete) got there first: return 409. Don't retry with another duck.
-- Pricing is computed from the same duck record that was decremented.
+- Decrement atomically with a conditional update (`WHERE id = ? AND price = ? AND deleted = false AND quantity >= ?`), in `DucksService.decrementStock`, which takes the duck returned by `findCheapestMatch`. If zero rows update, another order, a price edit or a delete got there first: return 409 "Duck N changed or no longer has Q in stock, please retry". Don't retry with another duck.
+- Pricing is computed from the same duck record that was decremented. The price condition makes that true: if the price was edited after `findCheapestMatch`, the order is refused rather than charged the old price. Exact DOUBLE equality is safe because the price is the stored value read back unchanged.
 
 ---
 

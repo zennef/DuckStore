@@ -42,7 +42,7 @@ describe('OrdersService', () => {
     const result = await service.place(order);
 
     expect(findCheapestMatch).toHaveBeenCalledWith(Color.Green, Size.Medium, 150);
-    expect(decrementStock).toHaveBeenCalledWith(7, 150);
+    expect(decrementStock).toHaveBeenCalledWith(duck, 150);
     expect(result).toEqual({
       duckId: 7,
       packageType: PackageMaterial.CARDBOARD,
@@ -67,7 +67,9 @@ describe('OrdersService', () => {
   });
 
   it('returns the 409 from decrementStock as is', async () => {
-    const conflict = new ConflictException('Duck 7 no longer has 150 in stock');
+    const conflict = new ConflictException(
+      'Duck 7 changed or no longer has 150 in stock, please retry',
+    );
     decrementStock.mockRejectedValue(conflict);
     await expect(service.place(order)).rejects.toBe(conflict);
   });

@@ -46,7 +46,7 @@ export class OrdersService {
     const shipping = this.shipping.get(dto.shippingMode);
     const protection = shipping.getProtection(material);
 
-    // Priced from the same duck record that is decremented below.
+    // Priced from this duck record. decrementStock only succeeds if the price is unchanged.
     const { lineItems, totalCents } = this.pricing.run({
       quantity: dto.quantity,
       unitPriceCents: toCents(duck.price),
@@ -55,7 +55,7 @@ export class OrdersService {
       shipping,
     });
 
-    await this.ducks.decrementStock(duck.id, dto.quantity);
+    await this.ducks.decrementStock(duck, dto.quantity);
 
     return {
       duckId: duck.id,
