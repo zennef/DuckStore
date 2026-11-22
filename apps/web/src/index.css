@@ -1,1 +1,15 @@
 @import 'tailwindcss';
+
+/* Shared button styles, so every button in the app looks the same. */
+@utility btn {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
+}
+@utility btn-primary {
+  @apply btn bg-blue-600 text-white hover:bg-blue-700 focus-visible:outline-blue-600;
+}
+@utility btn-secondary {
+  @apply btn border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus-visible:outline-blue-600;
+}
+@utility btn-danger {
+  @apply btn bg-red-600 text-white hover:bg-red-700 focus-visible:outline-red-600;
+}
