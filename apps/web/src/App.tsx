@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { ToastProvider } from './components/Toast';
 import { StorePage } from './features/store/StorePage';
 import { WarehousePage } from './features/warehouse/WarehousePage';
 
@@ -10,9 +11,11 @@ export function App() {
   const [queryClient] = useState(() => new QueryClient());
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

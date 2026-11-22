@@ -1,18 +1,34 @@
 import { useState } from 'react';
+import type { ApiError } from '../../api/client';
 import { useDucks } from '../../api/ducks';
 import type { Duck } from '../../api/types';
 import { PlusIcon } from '../../components/icons';
+import { useToast } from '../../components/Toast';
 import { DeleteDuckDialog } from './DeleteDuckDialog';
 import { DuckForm } from './DuckForm';
 import { DuckTable } from './DuckTable';
+import { addedMessage, deletedMessage, updatedMessage } from './messages';
 
 type OpenDialog = { kind: 'add' } | { kind: 'edit'; duck: Duck } | { kind: 'delete'; duck: Duck };
 
 export function WarehousePage() {
   const ducks = useDucks();
   const [dialog, setDialog] = useState<OpenDialog | null>(null);
+  const toast = useToast();
   const close = () => setDialog(null);
   const openAdd = () => setDialog({ kind: 'add' });
+
+  // Toasts show after the dialog closes: a modal dialog sits in the top layer above them.
+  const closeWith = (message: string) => {
+    close();
+    toast(message);
+  };
+  // 404/409 on edit or delete: the duck changed underneath the user. The mutation already
+  // refetches the list on settle, so close and explain with the server's message.
+  const closeWithStale = (error: ApiError) => {
+    close();
+    toast(error.message, 'error');
+  };
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -70,12 +86,29 @@ export function WarehousePage() {
         )}
       </section>
 
-      {dialog?.kind === 'add' && <DuckForm mode="create" onClose={close} onSaved={close} />}
+      {dialog?.kind === 'add' && (
+        <DuckForm
+          mode="create"
+          onClose={close}
+          onSaved={(result, sent) => closeWith(addedMessage(result, sent))}
+        />
+      )}
       {dialog?.kind === 'edit' && (
-        <DuckForm mode="edit" duck={dialog.duck} onClose={close} onSaved={close} onStale={close} />
+        <DuckForm
+          mode="edit"
+          duck={dialog.duck}
+          onClose={close}
+          onSaved={(result) => closeWith(updatedMessage(dialog.duck, result))}
+          onStale={closeWithStale}
+        />
       )}
       {dialog?.kind === 'delete' && (
-        <DeleteDuckDialog duck={dialog.duck} onClose={close} onDeleted={close} onStale={close} />
+        <DeleteDuckDialog
+          duck={dialog.duck}
+          onClose={close}
+          onDeleted={(duck) => closeWith(deletedMessage(duck))}
+          onStale={closeWithStale}
+        />
       )}
     </div>
   );
