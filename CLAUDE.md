@@ -253,6 +253,8 @@ All live in `pricing/pricing.pipeline.spec.ts`, along with an invariant check ac
 3. Merge-on-add, merge-on-edit, soft delete, edit restrictions, order stock decrement and the oversell 409 (API e2e).
 4. DuckForm create vs edit behavior (web).
 
+API e2e tests run against a separate database: `TEST_DATABASE_URL` if set, otherwise `DATABASE_URL` with `_test` appended to the database name (`duck_store_test`). Jest's global setup creates it and applies migrations with `prisma migrate deploy`; each test truncates `ducks` first. Docker must be running.
+
 ---
 
 ## Working agreement
