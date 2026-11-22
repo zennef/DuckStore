@@ -1,8 +1,13 @@
 import { screen } from '@testing-library/react';
 import { AppRoutes } from './App';
+import { mockFetch } from './test/fetch';
 import { renderWithProviders } from './test/render';
 
 describe('AppRoutes', () => {
+  beforeEach(() => {
+    mockFetch({ 'GET /api/ducks': { status: 200, body: [] } });
+  });
+
   it('redirects / to the warehouse and marks it active in the sidebar', () => {
     renderWithProviders(<AppRoutes />, { route: '/' });
 
