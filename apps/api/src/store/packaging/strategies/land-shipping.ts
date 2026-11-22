@@ -1,3 +1,4 @@
+import { LineItem } from '../../line-item';
 import { PackageMaterial, Protection, ShippingMode } from '../packaging.enums';
 import { ShippingStrategy } from '../shipping-strategy';
 
@@ -10,11 +11,13 @@ export class LandShipping implements ShippingStrategy {
     return [Protection.POLYSTYRENE_BALLS];
   }
 
-  getShippingCost(quantity: number): number {
-    return quantity * LandShipping.COST_PER_UNIT_CENTS;
-  }
-
-  getShippingLabel(quantity: number): string {
-    return `Land shipping (${quantity} x $${LandShipping.COST_PER_UNIT_CENTS / 100})`;
+  getShippingLineItems(quantity: number): LineItem[] {
+    return [
+      {
+        label: `Land shipping (${quantity} x $${LandShipping.COST_PER_UNIT_CENTS / 100})`,
+        amountCents: quantity * LandShipping.COST_PER_UNIT_CENTS,
+        type: 'charge',
+      },
+    ];
   }
 }

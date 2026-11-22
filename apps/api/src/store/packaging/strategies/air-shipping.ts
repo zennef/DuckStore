@@ -1,3 +1,5 @@
+import { LineItem } from '../../line-item';
+import { percentOf } from '../../pricing/money';
 import { PackageMaterial, Protection, ShippingMode } from '../packaging.enums';
 import { ShippingStrategy } from '../shipping-strategy';
 
@@ -15,19 +17,24 @@ export class AirShipping implements ShippingStrategy {
       : [Protection.POLYSTYRENE_BALLS];
   }
 
-  getShippingCost(quantity: number): number {
-    const baseCents = quantity * AirShipping.COST_PER_UNIT_CENTS;
-    if (quantity <= AirShipping.BULK_THRESHOLD) {
-      return baseCents;
-    }
-    // Exact in integer cents: the per-unit rate is a multiple of 100, so 85% of it is whole.
-    return (baseCents * (100 - AirShipping.BULK_DISCOUNT_PERCENT)) / 100;
-  }
+  getShippingLineItems(quantity: number): LineItem[] {
+    const chargeCents = quantity * AirShipping.COST_PER_UNIT_CENTS;
+    const lines: LineItem[] = [
+      {
+        label: `Air shipping (${quantity} x $${AirShipping.COST_PER_UNIT_CENTS / 100})`,
+        amountCents: chargeCents,
+        type: 'charge',
+      },
+    ];
 
-  getShippingLabel(quantity: number): string {
-    const rate = `${quantity} x $${AirShipping.COST_PER_UNIT_CENTS / 100}`;
-    return quantity > AirShipping.BULK_THRESHOLD
-      ? `Air shipping (${rate}, ${AirShipping.BULK_DISCOUNT_PERCENT}% bulk discount)`
-      : `Air shipping (${rate})`;
+    if (quantity > AirShipping.BULK_THRESHOLD) {
+      lines.push({
+        label: `Air bulk discount (${AirShipping.BULK_DISCOUNT_PERCENT}%)`,
+        amountCents: -percentOf(chargeCents, AirShipping.BULK_DISCOUNT_PERCENT),
+        type: 'discount',
+      });
+    }
+
+    return lines;
   }
 }

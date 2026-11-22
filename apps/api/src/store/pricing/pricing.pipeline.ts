@@ -9,7 +9,7 @@ export type PricingInput = Omit<PricingContext, 'runningTotalCents'>;
 
 export interface PricingResult {
   lineItems: LineItem[];
-  /** Always exactly the sum of lineItems[].amountCents. */
+  /** Always exactly the sum of lineItems[].amountCents. Shipping lines are always last. */
   totalCents: number;
 }
 
@@ -38,8 +38,9 @@ export class PricingPipeline {
     let runningTotalCents = 0;
 
     for (const rule of this.rules) {
-      const item = rule.apply({ ...input, runningTotalCents });
-      if (item) {
+      const result = rule.apply({ ...input, runningTotalCents });
+      const items = result === null ? [] : Array.isArray(result) ? result : [result];
+      for (const item of items) {
         lineItems.push(item);
         runningTotalCents += item.amountCents;
       }

@@ -71,13 +71,16 @@ describe('PricingPipeline', () => {
       expect(result.totalCents).toBe(4_047_200);
     });
 
-    it('1001 Small @ $10, Mexico, AIR: 15% off air cost = $35,655.62', () => {
-      // 10010.00 - 20% = 8008.00; +10% = 8808.80; +15% other 1321.32 = 10130.12; + air 30030.00 - 15% = 25525.50
+    it('1001 Small @ $10, Mexico, AIR: 15% off air cost as its own line = $35,655.62', () => {
+      // 10010.00 - 20% = 8008.00; +10% = 8808.80; +15% other 1321.32 = 10130.12; + air 30030.00; - 15% 4504.50
       const result = pipeline.run(order(1001, Size.Small, 10, 'Mexico', ShippingMode.AIR));
       expect(result.lineItems.map((i) => i.amountCents)).toEqual([
-        1_001_000, -200_200, 80_080, 132_132, 2_552_550,
+        1_001_000, -200_200, 80_080, 132_132, 3_003_000, -450_450,
       ]);
-      expect(result.lineItems.at(-1)?.label).toBe('Air shipping (1001 x $30, 15% bulk discount)');
+      expect(result.lineItems.slice(-2)).toEqual([
+        { label: 'Air shipping (1001 x $30)', amountCents: 3_003_000, type: 'charge' },
+        { label: 'Air bulk discount (15%)', amountCents: -450_450, type: 'discount' },
+      ]);
       expect(result.totalCents).toBe(3_565_562);
     });
 
@@ -117,10 +120,23 @@ describe('PricingPipeline', () => {
       }
     });
 
-    it('shipping is always the last line and is never taxed or discounted', () => {
+    it('shipping lines are always last, exactly as the strategy produced them (never taxed)', () => {
       for (const input of cases) {
         const { lineItems } = pipeline.run(input);
-        expect(lineItems.at(-1)?.amountCents).toBe(input.shipping.getShippingCost(input.quantity));
+        const shipping = input.shipping.getShippingLineItems(input.quantity);
+        expect(lineItems.slice(-shipping.length)).toEqual(shipping);
+      }
+    });
+
+    it('the Air bulk discount line appears only above 1000 units, right after the air charge', () => {
+      for (const input of cases.filter((c) => c.shipping.mode === ShippingMode.AIR)) {
+        const labels = pipeline.run(input).lineItems.map((i) => i.label);
+        const hasDiscount = labels.includes('Air bulk discount (15%)');
+        expect(hasDiscount).toBe(input.quantity > 1000);
+        if (hasDiscount) {
+          expect(labels.at(-2)).toMatch(/^Air shipping \(/);
+          expect(labels.at(-1)).toBe('Air bulk discount (15%)');
+        }
       }
     });
 

@@ -155,12 +155,12 @@ Placing an order **decrements** the chosen duck's quantity. (Interpretation call
 interface ShippingStrategy {
   mode: ShippingMode;
   getProtection(material: PackageMaterial): Protection[];
-  getShippingCost(quantity: number): number; // integer cents
-  getShippingLabel(quantity: number): string; // line item label, mentions any mode discount
+  // The charge first, then any mode discount as its own line. Integer cents, never empty.
+  getShippingLineItems(quantity: number): LineItem[];
 }
 ```
 
-Classes: `AirShipping`, `LandShipping`, `SeaShipping` in `packaging/strategies/`. The Air bulk discount (15% off the air cost when quantity > 1000) lives only in `AirShipping`.
+Classes: `AirShipping`, `LandShipping`, `SeaShipping` in `packaging/strategies/`. The Air bulk discount (15% off the air cost when quantity > 1000) lives only in `AirShipping`, which then returns two lines: `Air shipping (N x $30)` at the full amount and `Air bulk discount (15%)` as a discount, rounded half-up via `percentOf`. `LineItem` lives in `store/line-item.ts` so packaging and pricing share it.
 
 | Mode | Protection |
 |------|------------|
@@ -191,11 +191,12 @@ interface LineItem {
 }
 
 interface PricingRule {
-  apply(ctx: PricingContext): LineItem | null; // null = rule doesn't apply
+  // One item, several items (shipping plus its discount), or null when the rule doesn't apply.
+  apply(ctx: PricingContext): LineItem | LineItem[] | null;
 }
 ```
 
-Rule classes in `pricing/rules/`: `BaseCostRule`, `VolumeDiscountRule`, `PackageAdjustmentRule`, `CountryTaxRule`, `ShippingCostRule`. `ShippingCostRule` delegates to `ctx.shipping` for both amount and label and does no shipping math itself. Money helpers (`toCents`, `percentOf`, `formatUsd`) live in `pricing/money.ts`.
+Rule classes in `pricing/rules/`: `BaseCostRule`, `VolumeDiscountRule`, `PackageAdjustmentRule`, `CountryTaxRule`, `ShippingCostRule`. `ShippingCostRule` returns `ctx.shipping.getShippingLineItems(quantity)` as is and does no shipping math itself. Money helpers (`toCents`, `percentOf`, `formatUsd`) live in `pricing/money.ts`.
 
 `PricingPipeline.run(input)` runs rules **in order**, each against the **running total**, skips rules that return null, and returns `{ lineItems, totalCents }`. `input` is a `PricingContext` without `runningTotalCents`; the pipeline starts it at 0.
 
@@ -214,7 +215,7 @@ Order:
 - Shipping is not subject to the percentage rules.
 - Thresholds are strict: "greater than" and "exceeds" both exclude the boundary value.
 - Country matching is case-insensitive on a normalized code (`USA`, `BOLIVIA`, `INDIA`), after trimming whitespace. Aliases like `US` or `United States` are "other" (15%).
-- The Air bulk discount appears as **one net shipping line**, with the discount named in its label, e.g. `Air shipping (1001 x $30, 15% bulk discount)`. (Mike, 2026-11-21.)
+- The Air bulk discount is **its own line item**, right after the full air charge: `Air shipping (1001 x $30)` +$30,030.00, then `Air bulk discount (15%)` -$4,504.50. Shipping lines stay last and untaxed. (Mike, 2026-11-21; replaces the earlier single net line.)
 
 ### Money
 - Compute in **integer cents** internally.

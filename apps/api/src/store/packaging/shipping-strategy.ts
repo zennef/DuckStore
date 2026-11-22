@@ -1,3 +1,4 @@
+import { LineItem } from '../line-item';
 import { PackageMaterial, Protection, ShippingMode } from './packaging.enums';
 
 /**
@@ -8,8 +9,9 @@ import { PackageMaterial, Protection, ShippingMode } from './packaging.enums';
 export interface ShippingStrategy {
   readonly mode: ShippingMode;
   getProtection(material: PackageMaterial): Protection[];
-  /** Total shipping cost for the order, in integer cents. */
-  getShippingCost(quantity: number): number;
-  /** Line item label for the shipping charge, including any mode-specific discount. */
-  getShippingLabel(quantity: number): string;
+  /**
+   * The shipping lines for an order, in integer cents: the charge first, then
+   * any mode-specific discount as its own line. Never empty.
+   */
+  getShippingLineItems(quantity: number): LineItem[];
 }

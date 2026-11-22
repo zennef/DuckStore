@@ -27,43 +27,51 @@ describe('Shipping strategies', () => {
     });
   });
 
-  describe('shipping cost (integer cents)', () => {
-    it('Sea is a flat $400 regardless of quantity', () => {
+  describe('shipping line items (integer cents)', () => {
+    it('Sea is a single flat $400 charge regardless of quantity', () => {
       const sea = new SeaShipping();
-      expect(sea.getShippingCost(1)).toBe(40_000);
-      expect(sea.getShippingCost(5000)).toBe(40_000);
+      const expected = [{ label: 'Sea shipping (flat $400)', amountCents: 40_000, type: 'charge' }];
+      expect(sea.getShippingLineItems(1)).toEqual(expected);
+      expect(sea.getShippingLineItems(5000)).toEqual(expected);
     });
 
-    it('Land is $10 per unit', () => {
-      const land = new LandShipping();
-      expect(land.getShippingCost(1)).toBe(1_000);
-      expect(land.getShippingCost(150)).toBe(150_000);
-      expect(land.getShippingCost(2000)).toBe(2_000_000);
-    });
-
-    it('Air is $30 per unit', () => {
-      expect(new AirShipping().getShippingCost(150)).toBe(450_000);
-    });
-
-    it('Air at exactly 1000 units gets no bulk discount', () => {
-      expect(new AirShipping().getShippingCost(1000)).toBe(3_000_000);
-    });
-
-    it('Air at 1001 units takes 15% off the air cost', () => {
-      // 1001 x $30 = $30,030.00, minus 15% = $25,525.50
-      expect(new AirShipping().getShippingCost(1001)).toBe(2_552_550);
-    });
-  });
-
-  describe('shipping labels', () => {
     it.each([
-      [new AirShipping(), 150, 'Air shipping (150 x $30)'],
-      [new AirShipping(), 1000, 'Air shipping (1000 x $30)'],
-      [new AirShipping(), 1001, 'Air shipping (1001 x $30, 15% bulk discount)'],
-      [new LandShipping(), 150, 'Land shipping (150 x $10)'],
-      [new SeaShipping(), 150, 'Sea shipping (flat $400)'],
-    ])('%p for %i units -> %s', (strategy, quantity, label) => {
-      expect(strategy.getShippingLabel(quantity)).toBe(label);
+      [1, 1_000],
+      [150, 150_000],
+      [2000, 2_000_000],
+    ])('Land is $10 per unit: %i units -> %i cents', (quantity, amountCents) => {
+      expect(new LandShipping().getShippingLineItems(quantity)).toEqual([
+        { label: `Land shipping (${quantity} x $10)`, amountCents, type: 'charge' },
+      ]);
+    });
+
+    it('Air is a single $30 per unit charge', () => {
+      expect(new AirShipping().getShippingLineItems(150)).toEqual([
+        { label: 'Air shipping (150 x $30)', amountCents: 450_000, type: 'charge' },
+      ]);
+    });
+
+    it('Air at exactly 1000 units has no bulk discount line', () => {
+      expect(new AirShipping().getShippingLineItems(1000)).toEqual([
+        { label: 'Air shipping (1000 x $30)', amountCents: 3_000_000, type: 'charge' },
+      ]);
+    });
+
+    it('Air at 1001 units adds a separate 15% bulk discount line', () => {
+      // 1001 x $30 = $30,030.00; 15% of that = $4,504.50; net $25,525.50
+      expect(new AirShipping().getShippingLineItems(1001)).toEqual([
+        { label: 'Air shipping (1001 x $30)', amountCents: 3_003_000, type: 'charge' },
+        { label: 'Air bulk discount (15%)', amountCents: -450_450, type: 'discount' },
+      ]);
+    });
+
+    it('Air bulk discount is 15% of the full air charge ($4.50 per unit, so always whole cents)', () => {
+      // It goes through percentOf (half-up), but at $30/unit there is never a remainder to round.
+      for (const quantity of [1001, 1111, 4321, 99_999]) {
+        const [charge, discount] = new AirShipping().getShippingLineItems(quantity);
+        expect(discount.amountCents).toBe(-quantity * 450);
+        expect(charge.amountCents + discount.amountCents).toBe(quantity * 2550);
+      }
     });
   });
 
@@ -84,8 +92,7 @@ describe('Shipping strategies', () => {
       const custom: ShippingStrategy = {
         mode: ShippingMode.LAND,
         getProtection: () => [],
-        getShippingCost: () => 1,
-        getShippingLabel: () => 'Custom',
+        getShippingLineItems: () => [{ label: 'Custom', amountCents: 1, type: 'charge' }],
       };
       expect(new ShippingStrategyRegistry([custom]).get(ShippingMode.LAND)).toBe(custom);
     });

@@ -1,3 +1,4 @@
+import { LineItem } from '../../line-item';
 import { PackageMaterial, Protection, ShippingMode } from '../packaging.enums';
 import { ShippingStrategy } from '../shipping-strategy';
 
@@ -10,11 +11,13 @@ export class SeaShipping implements ShippingStrategy {
     return [Protection.MOISTURE_BEADS, Protection.BUBBLE_WRAP];
   }
 
-  getShippingCost(_quantity: number): number {
-    return SeaShipping.FLAT_COST_CENTS;
-  }
-
-  getShippingLabel(_quantity: number): string {
-    return `Sea shipping (flat $${SeaShipping.FLAT_COST_CENTS / 100})`;
+  getShippingLineItems(_quantity: number): LineItem[] {
+    return [
+      {
+        label: `Sea shipping (flat $${SeaShipping.FLAT_COST_CENTS / 100})`,
+        amountCents: SeaShipping.FLAT_COST_CENTS,
+        type: 'charge',
+      },
+    ];
   }
 }
