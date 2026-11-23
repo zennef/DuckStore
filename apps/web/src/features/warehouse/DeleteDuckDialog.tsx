@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type RefObject } from 'react';
 import { ApiError } from '../../api/client';
 import { useDeleteDuck } from '../../api/ducks';
 import type { Duck } from '../../api/types';
@@ -11,10 +11,18 @@ interface DeleteDuckDialogProps {
   onDeleted: (duck: Duck) => void;
   /** 404: someone else deleted or merged the duck first. A 409 shows inline instead. */
   onNotFound: (error: ApiError) => void;
+  /** Focus target on close once the deleted duck's row (and its Delete button) is gone. */
+  focusFallback?: RefObject<HTMLElement | null>;
 }
 
 /** Confirms a delete. The API soft-deletes, so the record stays in history. */
-export function DeleteDuckDialog({ duck, onClose, onDeleted, onNotFound }: DeleteDuckDialogProps) {
+export function DeleteDuckDialog({
+  duck,
+  onClose,
+  onDeleted,
+  onNotFound,
+  focusFallback,
+}: DeleteDuckDialogProps) {
   const remove = useDeleteDuck();
   const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +39,12 @@ export function DeleteDuckDialog({ duck, onClose, onDeleted, onNotFound }: Delet
   }
 
   return (
-    <Modal title={`Delete ${describeDuck(duck)}?`} onClose={onClose} canClose={!remove.isPending}>
+    <Modal
+      title={`Delete ${describeDuck(duck)}?`}
+      onClose={onClose}
+      canClose={!remove.isPending}
+      focusFallback={focusFallback}
+    >
       <p className="mt-2 text-sm text-gray-600">
         It will no longer appear in the inventory. Its record is kept for history.
       </p>

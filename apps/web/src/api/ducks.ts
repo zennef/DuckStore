@@ -11,6 +11,11 @@ export function useDucks() {
 /**
  * Every mutation refetches the list once it settles, success or failure. A failed edit or
  * delete usually means the duck changed underneath the user, so the list is stale then too.
+ *
+ * Returning the promise matters: TanStack Query keeps the mutation pending until it
+ * resolves, so the per-call onSuccess/onError (which close dialogs) run after the list has
+ * refreshed. A deleted or merged row is then already gone when its dialog closes, which is
+ * what lets Modal send focus to its fallback instead of a detached button.
  */
 function useInvalidateDucks() {
   const queryClient = useQueryClient();

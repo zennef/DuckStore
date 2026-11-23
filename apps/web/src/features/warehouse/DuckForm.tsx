@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent, type ReactNode } from 'react';
+import { useId, useState, type FormEvent, type ReactNode, type RefObject } from 'react';
 import { ApiError } from '../../api/client';
 import { useCreateDuck, useUpdateDuck } from '../../api/ducks';
 import {
@@ -20,6 +20,8 @@ type FieldErrors = Partial<Record<Field, string>>;
 interface CommonProps {
   /** The user cancelled. */
   onClose: () => void;
+  /** Focus target on close if the trigger is gone (an edit that merged the duck away). */
+  focusFallback?: RefObject<HTMLElement | null>;
 }
 
 export type DuckFormProps = CommonProps &
@@ -42,7 +44,7 @@ export type DuckFormProps = CommonProps &
  * and sends only the fields that changed.
  */
 export function DuckForm(props: DuckFormProps) {
-  const { mode, duck, onClose } = props;
+  const { mode, duck, onClose, focusFallback } = props;
   const isEdit = mode === 'edit';
   const ids = { color: useId(), size: useId(), price: useId(), quantity: useId(), locked: useId() };
 
@@ -128,6 +130,7 @@ export function DuckForm(props: DuckFormProps) {
       title={isEdit ? `Edit duck #${duck!.id}` : 'Add Duck'}
       onClose={onClose}
       canClose={!pending}
+      focusFallback={focusFallback}
     >
       <form noValidate onSubmit={handleSubmit} className="mt-4 space-y-4">
         {formErrors.length > 0 && (

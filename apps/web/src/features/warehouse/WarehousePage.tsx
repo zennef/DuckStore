@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { ApiError } from '../../api/client';
 import { useDucks } from '../../api/ducks';
 import type { Duck } from '../../api/types';
@@ -15,6 +15,9 @@ export function WarehousePage() {
   const ducks = useDucks();
   const [dialog, setDialog] = useState<OpenDialog | null>(null);
   const toast = useToast();
+  // Focus lands here when a dialog's trigger is gone on close: a deleted row's Delete
+  // button, an edit that merged the duck away, or the empty state's Add Duck button.
+  const inventoryHeading = useRef<HTMLHeadingElement>(null);
   const close = () => setDialog(null);
   const openAdd = () => setDialog({ kind: 'add' });
 
@@ -47,7 +50,12 @@ export function WarehousePage() {
         aria-labelledby="inventory-heading"
         className="mt-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm"
       >
-        <h2 id="inventory-heading" className="mb-4 text-sm font-semibold">
+        <h2
+          id="inventory-heading"
+          ref={inventoryHeading}
+          tabIndex={-1}
+          className="mb-4 text-sm font-semibold focus:outline-none"
+        >
           Duck Inventory
         </h2>
 
@@ -90,6 +98,7 @@ export function WarehousePage() {
         <DuckForm
           mode="create"
           onClose={close}
+          focusFallback={inventoryHeading}
           onSaved={(result, sent) => closeWith(addedMessage(result, sent))}
         />
       )}
@@ -98,6 +107,7 @@ export function WarehousePage() {
           mode="edit"
           duck={dialog.duck}
           onClose={close}
+          focusFallback={inventoryHeading}
           onSaved={(result) => closeWith(updatedMessage(dialog.duck, result))}
           onNotFound={closeWithNotFound}
         />
@@ -106,6 +116,7 @@ export function WarehousePage() {
         <DeleteDuckDialog
           duck={dialog.duck}
           onClose={close}
+          focusFallback={inventoryHeading}
           onDeleted={(duck) => closeWith(deletedMessage(duck))}
           onNotFound={closeWithNotFound}
         />

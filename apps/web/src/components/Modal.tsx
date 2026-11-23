@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 interface ModalProps {
   title: string;
@@ -6,6 +6,11 @@ interface ModalProps {
   onClose: () => void;
   /** False while saving, so Esc can't drop a request whose result we still need to show. */
   canClose?: boolean;
+  /**
+   * Where focus goes on close if the trigger is no longer on the page, e.g. the Delete
+   * button of a row that was just deleted. Without it focus would fall back to <body>.
+   */
+  focusFallback?: RefObject<HTMLElement | null>;
   children: ReactNode;
 }
 
@@ -14,7 +19,7 @@ interface ModalProps {
  * and the backdrop for free. Mount it to open, unmount it to close; focus then returns
  * to whatever was focused when it opened (the trigger), if that is still on the page.
  */
-export function Modal({ title, onClose, canClose = true, children }: ModalProps) {
+export function Modal({ title, onClose, canClose = true, focusFallback, children }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   // Read during the first render: by the time effects run, React has already applied any
@@ -28,7 +33,9 @@ export function Modal({ title, onClose, canClose = true, children }: ModalProps)
     return () => {
       dialog.close();
       if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus();
+      else focusFallback?.current?.focus();
     };
+    // focusFallback is a ref, read at close time, so it never needs to re-run this effect.
   }, [trigger]);
 
   return (

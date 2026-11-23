@@ -128,6 +128,71 @@ describe('Warehouse feedback', () => {
     expect(await toasts().findByText('Duck #4 deleted.')).toBeInTheDocument();
   });
 
+  describe('focus when the trigger is gone', () => {
+    const inventoryHeading = () => screen.getByRole('heading', { name: 'Duck Inventory' });
+
+    it('moves focus to the Duck Inventory heading after a successful delete', async () => {
+      mockFetch({
+        'GET /api/ducks': [
+          { status: 200, body: MOCKUP_DUCKS },
+          { status: 200, body: MOCKUP_DUCKS.filter((d) => d.id !== 4) },
+        ],
+        'DELETE /api/ducks/4': { status: 204 },
+      });
+      const { user } = await renderPage();
+
+      await user.click(screen.getByRole('button', { name: 'Delete duck #4' }));
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+
+      await toasts().findByText('Duck #4 deleted.');
+      expect(screen.queryByRole('button', { name: 'Delete duck #4' })).not.toBeInTheDocument();
+      expect(inventoryHeading()).toHaveFocus();
+      // Focusable by script only, so it stays out of the tab order.
+      expect(inventoryHeading()).toHaveAttribute('tabindex', '-1');
+    });
+
+    it('moves focus to the Duck Inventory heading after an edit that merges', async () => {
+      mockFetch({
+        'GET /api/ducks': [
+          { status: 200, body: MOCKUP_DUCKS },
+          {
+            status: 200,
+            body: MOCKUP_DUCKS.filter((d) => d.id !== 4).map((d) =>
+              d.id === 3 ? { ...d, quantity: 1700 } : d,
+            ),
+          },
+        ],
+        'PATCH /api/ducks/4': {
+          status: 200,
+          body: { duck: { ...yellow3, quantity: 1700 }, merged: true },
+        },
+      });
+      const { user } = await renderPage();
+
+      await editQuantity(user, 4, '900');
+
+      await toasts().findByText(/so it was merged into it/);
+      expect(screen.queryByRole('button', { name: 'Edit duck #4' })).not.toBeInTheDocument();
+      expect(inventoryHeading()).toHaveFocus();
+    });
+
+    it('still returns focus to the trigger when it is still on the page', async () => {
+      mockFetch({
+        'GET /api/ducks': { status: 200, body: MOCKUP_DUCKS },
+        'PATCH /api/ducks/4': {
+          status: 200,
+          body: { duck: { ...black4, quantity: 900 }, merged: false },
+        },
+      });
+      const { user } = await renderPage();
+
+      await editQuantity(user, 4, '900');
+
+      await toasts().findByText('Duck #4 updated.');
+      expect(screen.getByRole('button', { name: 'Edit duck #4' })).toHaveFocus();
+    });
+  });
+
   it('on a 404 from an edit, closes the form, shows the server message and refetches', async () => {
     const fetchMock = mockFetch({
       'GET /api/ducks': [
