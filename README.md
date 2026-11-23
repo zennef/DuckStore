@@ -54,7 +54,7 @@ The e2e tests run against their own database: `TEST_DATABASE_URL` if set, otherw
 
 The web tests stub `fetch` per test (`apps/web/src/test/fetch.ts`, routes keyed by `"METHOD /path"`) rather than using MSW.
 
-CI (`.github/workflows/ci.yml`) runs on every push and pull request: `npm ci`, `format:check`, API unit tests, API e2e tests against a `mysql:8.4` service container (the same image as `docker-compose.yml`), web tests, and both builds.
+CI (`.github/workflows/ci.yml`) runs on pushes to `main` and on every pull request: `npm ci`, `format:check`, API unit tests, API e2e tests against a `mysql:8.4` service container (the same image as `docker-compose.yml`), web tests, and both builds.
 
 What the tests cover, roughly in the order I cared about them:
 
