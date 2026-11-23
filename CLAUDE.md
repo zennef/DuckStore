@@ -23,6 +23,8 @@ The original spec lives in `docs/spec.pdf`. This file records how we're interpre
 
 **Why MySQL over MongoDB:** the spec models Duck with an integer `Id`, which maps to auto-increment for free. Mongo would need a counter collection to fake it.
 
+**Line endings:** `.gitattributes` sets `* text=auto eol=lf`, so the repo stores LF and every checkout gets LF, including on Windows with `core.autocrlf`. Prettier's `endOfLine: auto` stays as a backstop. A working copy checked out before the attribute, or a file an editor saves with CRLF, keeps its line endings, and `format:check` doesn't fail on those. The attribute keeps the repo consistent and `auto` keeps the check about formatting.
+
 ## Repo layout
 
 ```
