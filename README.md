@@ -122,7 +122,7 @@ Price must be greater than 0 with at most 2 decimal places. Quantity is a whole 
 `POST /api/store/orders`
 
 ```json
-{ "color": "Green", "size": "Medium", "quantity": 150, "country": "USA", "shippingMode": "AIR" }
+{ "color": "Black", "size": "Medium", "quantity": 150, "country": "USA", "shippingMode": "AIR" }
 ```
 
 `shippingMode` is `AIR`, `LAND` or `SEA`. `quantity` is a positive integer and `country` is any string that is non-empty after trimming.
@@ -132,7 +132,7 @@ Response (201):
 <!-- prettier-ignore -->
 ```json
 {
-  "duckId": 3,
+  "duckId": 4,
   "packageType": "CARDBOARD",
   "protection": ["POLYSTYRENE_BALLS"],
   "lineItems": [

@@ -162,14 +162,14 @@ Both `DucksController` (`/api/ducks`) and `StoreDucksController` (`/api/store/du
 Request:
 
 ```json
-{ "color": "Green", "size": "Medium", "quantity": 150, "country": "USA", "shippingMode": "AIR" }
+{ "color": "Black", "size": "Medium", "quantity": 150, "country": "USA", "shippingMode": "AIR" }
 ```
 
 Response (201):
 <!-- prettier-ignore -->
 ```json
 {
-  "duckId": 3,
+  "duckId": 4,
   "packageType": "CARDBOARD",
   "protection": ["POLYSTYRENE_BALLS"],
   "lineItems": [
