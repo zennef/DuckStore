@@ -47,6 +47,7 @@ duck-store/
         test/                Render and fetch-mock helpers, jsdom setup
   docs/
     spec.pdf
+    architecture.md      Mermaid diagrams of modules, classes and main flows. Keep in step with the code.
   .github/workflows/ci.yml
   docker-compose.yml
   README.md            Setup, API reference and design notes for reviewers
