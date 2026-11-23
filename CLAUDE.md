@@ -45,11 +45,13 @@ duck-store/
         test/                Render and fetch-mock helpers, jsdom setup
   docs/
     spec.pdf
+  .github/workflows/ci.yml
   docker-compose.yml
+  README.md            Setup, API reference and design notes for reviewers
   CLAUDE.md
 ```
 
-npm workspaces at the root.
+npm workspaces at the root. `npm run db:reset` (`prisma migrate reset --force`) drops the dev database, reapplies migrations and reseeds, which is how soft-deleted rows get cleared.
 
 ---
 
