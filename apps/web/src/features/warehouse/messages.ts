@@ -18,3 +18,11 @@ export function updatedMessage(edited: Duck, { duck, merged }: DuckWriteResult):
 export function deletedMessage(duck: Duck): string {
   return `Duck #${duck.id} deleted.`;
 }
+
+/**
+ * A 404 on edit or delete. Our own copy rather than the server's "Duck 4 not found", which
+ * reads like an error on our side. The list has already refetched by the time this shows.
+ */
+export function staleMessage(duck: Duck): string {
+  return `Duck #${duck.id} was deleted by someone else. The list is up to date.`;
+}

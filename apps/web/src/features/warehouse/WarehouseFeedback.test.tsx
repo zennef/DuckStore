@@ -193,7 +193,7 @@ describe('Warehouse feedback', () => {
     });
   });
 
-  it('on a 404 from an edit, closes the form, shows the server message and refetches', async () => {
+  it('on a 404 from an edit, closes the form, explains in our own words and refetches', async () => {
     const fetchMock = mockFetch({
       'GET /api/ducks': [
         { status: 200, body: MOCKUP_DUCKS },
@@ -208,7 +208,10 @@ describe('Warehouse feedback', () => {
 
     await editQuantity(user, 4, '10');
 
-    expect(await toasts().findByText('Duck 4 not found')).toBeInTheDocument();
+    expect(
+      await toasts().findByText('Duck #4 was deleted by someone else. The list is up to date.'),
+    ).toBeInTheDocument();
+    expect(toasts().queryByText('Duck 4 not found')).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: 'Edit duck #4' })).not.toBeInTheDocument(),
@@ -216,7 +219,7 @@ describe('Warehouse feedback', () => {
     expect(callCount(fetchMock, 'GET /api/ducks')).toBe(2);
   });
 
-  it('on a 404 from a delete, closes the dialog, shows the message and refetches', async () => {
+  it('on a 404 from a delete, closes the dialog, explains in our own words and refetches', async () => {
     const fetchMock = mockFetch({
       'GET /api/ducks': [
         { status: 200, body: MOCKUP_DUCKS },
@@ -232,7 +235,10 @@ describe('Warehouse feedback', () => {
     await user.click(screen.getByRole('button', { name: 'Delete duck #4' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
 
-    expect(await toasts().findByText('Duck 4 not found')).toBeInTheDocument();
+    expect(
+      await toasts().findByText('Duck #4 was deleted by someone else. The list is up to date.'),
+    ).toBeInTheDocument();
+    expect(toasts().queryByText('Duck 4 not found')).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(callCount(fetchMock, 'GET /api/ducks')).toBe(2);
   });

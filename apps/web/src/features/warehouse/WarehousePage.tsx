@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-import type { ApiError } from '../../api/client';
 import { useDucks } from '../../api/ducks';
 import type { Duck } from '../../api/types';
 import { PlusIcon } from '../../components/icons';
@@ -7,7 +6,7 @@ import { useToast } from '../../components/Toast';
 import { DeleteDuckDialog } from './DeleteDuckDialog';
 import { DuckForm } from './DuckForm';
 import { DuckTable } from './DuckTable';
-import { addedMessage, deletedMessage, updatedMessage } from './messages';
+import { addedMessage, deletedMessage, staleMessage, updatedMessage } from './messages';
 
 type OpenDialog = { kind: 'add' } | { kind: 'edit'; duck: Duck } | { kind: 'delete'; duck: Duck };
 
@@ -27,10 +26,10 @@ export function WarehousePage() {
     toast(message);
   };
   // 404 on edit or delete: the duck is gone. The mutation already refetches the list on
-  // settle, so close and explain with the server's message. A 409 stays in the dialog.
-  const closeWithNotFound = (error: ApiError) => {
+  // settle, so close and say so in our own words. A 409 stays in the dialog.
+  const closeWithNotFound = (duck: Duck) => {
     close();
-    toast(error.message, 'error');
+    toast(staleMessage(duck), 'error');
   };
 
   return (
@@ -109,7 +108,7 @@ export function WarehousePage() {
           onClose={close}
           focusFallback={inventoryHeading}
           onSaved={(result) => closeWith(updatedMessage(dialog.duck, result))}
-          onNotFound={closeWithNotFound}
+          onNotFound={() => closeWithNotFound(dialog.duck)}
         />
       )}
       {dialog?.kind === 'delete' && (
@@ -118,7 +117,7 @@ export function WarehousePage() {
           onClose={close}
           focusFallback={inventoryHeading}
           onDeleted={(duck) => closeWith(deletedMessage(duck))}
-          onNotFound={closeWithNotFound}
+          onNotFound={() => closeWithNotFound(dialog.duck)}
         />
       )}
     </div>
