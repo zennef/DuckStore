@@ -20,9 +20,10 @@ export function deletedMessage(duck: Duck): string {
 }
 
 /**
- * A 404 on edit or delete. Our own copy rather than the server's "Duck 4 not found", which
- * reads like an error on our side. The list has already refetched by the time this shows.
+ * A 404 on edit or delete. The duck was deleted, or another edit merged it into a matching
+ * duck (which soft-deletes it). Our own copy rather than the server's "Duck 4 not found",
+ * which reads like an error on our side. The list has already refetched by the time this shows.
  */
 export function staleMessage(duck: Duck): string {
-  return `Duck #${duck.id} was deleted by someone else. The list is up to date.`;
+  return `Duck #${duck.id} was deleted or merged by someone else. The list is up to date.`;
 }

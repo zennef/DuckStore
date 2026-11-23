@@ -209,7 +209,9 @@ describe('Warehouse feedback', () => {
     await editQuantity(user, 4, '10');
 
     expect(
-      await toasts().findByText('Duck #4 was deleted by someone else. The list is up to date.'),
+      await toasts().findByText(
+        'Duck #4 was deleted or merged by someone else. The list is up to date.',
+      ),
     ).toBeInTheDocument();
     expect(toasts().queryByText('Duck 4 not found')).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -236,7 +238,9 @@ describe('Warehouse feedback', () => {
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
 
     expect(
-      await toasts().findByText('Duck #4 was deleted by someone else. The list is up to date.'),
+      await toasts().findByText(
+        'Duck #4 was deleted or merged by someone else. The list is up to date.',
+      ),
     ).toBeInTheDocument();
     expect(toasts().queryByText('Duck 4 not found')).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
