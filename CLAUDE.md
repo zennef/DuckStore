@@ -317,6 +317,8 @@ All live in `pricing/pricing.pipeline.spec.ts`, along with an invariant check ac
 
 API e2e tests run against a separate database: `TEST_DATABASE_URL` if set, otherwise `DATABASE_URL` with `_test` appended to the database name (`duck_store_test`). Jest's global setup creates it and applies migrations with `prisma migrate deploy`; each test truncates `ducks` first. Docker must be running.
 
+CI (`.github/workflows/ci.yml`) runs on every push and pull request: `npm ci`, `format:check`, API unit tests, API e2e tests against a `mysql:8.4` service container (the docker-compose image), web tests, then both builds. Node comes from `.nvmrc`.
+
 ---
 
 ## Working agreement
