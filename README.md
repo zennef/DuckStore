@@ -41,6 +41,15 @@ This runs `prisma migrate reset --force`: it drops the dev database, reapplies e
 
 `npm run db:down` stops and removes the MySQL container. The data lives in the `mysql-data` volume, so it survives that.
 
+### Troubleshooting
+
+Nothing in the setup is OS-specific. I run it on Windows, CI runs the full setup on Linux for every pull request, and `mysql:8.4` has arm64 images, so Apple Silicon Macs don't need emulation. When setup fails, it's usually because of something already on the machine:
+
+- **`db:up` fails with "port is already allocated".** Something else is using port 3306, often a MySQL installed with Homebrew. Stop it (`brew services stop mysql`), or map another port: change `'3306:3306'` to `'3307:3306'` in `docker-compose.yml` and use `3307` in `DATABASE_URL` in `apps/api/.env`.
+- **The API can't start because port 3000 is taken.** Set `PORT` in `apps/api/.env` and change the proxy target in `apps/web/vite.config.ts` to match. Vite moves to the next free port on its own if 5173 is taken.
+- **`db:up` fails with "Cannot connect to the Docker daemon".** Start Docker Desktop (or Colima, OrbStack and so on) first. The `--wait` flag needs Docker Compose v2, which current Docker Desktop includes.
+- **Install or tests fail on an older Node.** The repo needs Node 22 or later and pins 24 in `.nvmrc`. With nvm, run `nvm use` in the repo root.
+
 ## Running tests
 
 ```sh
