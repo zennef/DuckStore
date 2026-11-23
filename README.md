@@ -85,7 +85,9 @@ apps/
       features/warehouse/   Page, table, DuckForm, delete dialog, toast copy
       features/store/       Placeholder page listing the Store endpoints
       test/                 Render and fetch helpers, jsdom setup
-docs/spec.pdf
+docs/
+  spec.pdf                  The original spec
+  architecture.md           Diagrams of modules, classes and request flows
 docker-compose.yml
 CLAUDE.md                   Running record of decisions and interpretation calls
 ```
@@ -153,6 +155,8 @@ Response (201):
 `GET /api/health` returns `{ "status": "ok", "database": "up" }` after a `SELECT 1`.
 
 ## Design patterns
+
+For diagrams of the modules, classes and main request flows, see [docs/architecture.md](docs/architecture.md).
 
 I used a pattern where the spec's shape already matched one, and left the rest as plain code. Each of these has a short comment in the code on why it fits.
 
