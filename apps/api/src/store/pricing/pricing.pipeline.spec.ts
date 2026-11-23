@@ -50,7 +50,9 @@ describe('PricingPipeline', () => {
       expect(amounts(order(100, Size.Large, 20, 'Bolivia', ShippingMode.LAND))).toEqual([
         200_000, 10_000, 27_300, 100_000,
       ]);
-      expect(pipeline.run(order(100, Size.Large, 20, 'Bolivia', ShippingMode.LAND)).totalCents).toBe(337_300);
+      expect(
+        pipeline.run(order(100, Size.Large, 20, 'Bolivia', ShippingMode.LAND)).totalCents,
+      ).toBe(337_300);
     });
 
     it('101 Large @ $20, Bolivia, LAND: volume discount applies = $2,927.38', () => {
@@ -58,7 +60,9 @@ describe('PricingPipeline', () => {
       expect(amounts(order(101, Size.Large, 20, 'Bolivia', ShippingMode.LAND))).toEqual([
         202_000, -40_400, 8_080, 22_058, 101_000,
       ]);
-      expect(pipeline.run(order(101, Size.Large, 20, 'Bolivia', ShippingMode.LAND)).totalCents).toBe(292_738);
+      expect(
+        pipeline.run(order(101, Size.Large, 20, 'Bolivia', ShippingMode.LAND)).totalCents,
+      ).toBe(292_738);
     });
 
     it('1000 Small @ $10, India, AIR: no air discount = $40,472.00', () => {
@@ -88,7 +92,9 @@ describe('PricingPipeline', () => {
       expect(amounts(order(50, Size.XSmall, 8, 'usa', ShippingMode.SEA))).toEqual([
         40_000, 4_000, 7_920, 40_000,
       ]);
-      expect(pipeline.run(order(50, Size.XSmall, 8, 'usa', ShippingMode.SEA)).totalCents).toBe(91_920);
+      expect(pipeline.run(order(50, Size.XSmall, 8, 'usa', ShippingMode.SEA)).totalCents).toBe(
+        91_920,
+      );
     });
   });
 

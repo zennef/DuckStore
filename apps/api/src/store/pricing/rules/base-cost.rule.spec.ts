@@ -5,7 +5,9 @@ describe('BaseCostRule', () => {
   const rule = new BaseCostRule();
 
   it('charges quantity x unit price', () => {
-    const item = rule.apply(makeContext({ quantity: 150, unitPriceCents: 1500, runningTotalCents: 0 }));
+    const item = rule.apply(
+      makeContext({ quantity: 150, unitPriceCents: 1500, runningTotalCents: 0 }),
+    );
     expect(item).toEqual({
       label: 'Base cost (150 x $15.00)',
       amountCents: 225_000,
@@ -20,7 +22,9 @@ describe('BaseCostRule', () => {
   });
 
   it('ignores the running total (it is the first rule)', () => {
-    const item = rule.apply(makeContext({ quantity: 2, unitPriceCents: 500, runningTotalCents: 99_999 }));
+    const item = rule.apply(
+      makeContext({ quantity: 2, unitPriceCents: 500, runningTotalCents: 99_999 }),
+    );
     expect(item.amountCents).toBe(1000);
   });
 });

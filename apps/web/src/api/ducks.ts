@@ -30,7 +30,8 @@ export function useCreateDuck() {
 export function useUpdateDuck() {
   const onSettled = useInvalidateDucks();
   return useMutation({
-    mutationFn: ({ id, input }: { id: number; input: UpdateDuckInput }) => ducksApi.update(id, input),
+    mutationFn: ({ id, input }: { id: number; input: UpdateDuckInput }) =>
+      ducksApi.update(id, input),
     onSettled,
   });
 }

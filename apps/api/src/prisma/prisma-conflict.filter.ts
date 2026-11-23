@@ -10,10 +10,7 @@ export const WRITE_CONFLICT_CODE = 'P2034';
  * back, so the client can safely retry. Any other error is returned unchanged.
  */
 export function mapPrismaError(error: unknown): unknown {
-  if (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === WRITE_CONFLICT_CODE
-  ) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === WRITE_CONFLICT_CODE) {
     return new ConflictException('Conflicting update, please retry');
   }
   return error;

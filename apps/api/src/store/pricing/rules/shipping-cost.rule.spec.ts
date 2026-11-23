@@ -19,7 +19,9 @@ describe('ShippingCostRule', () => {
       getShippingLineItems: jest.fn().mockReturnValue(lines),
     };
 
-    const items = rule.apply(makeContext({ quantity: 7, shipping: strategy, runningTotalCents: 999_999 }));
+    const items = rule.apply(
+      makeContext({ quantity: 7, shipping: strategy, runningTotalCents: 999_999 }),
+    );
 
     expect(strategy.getShippingLineItems).toHaveBeenCalledWith(7);
     expect(items).toEqual(lines);

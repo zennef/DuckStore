@@ -26,7 +26,11 @@ interface CommonProps {
 
 export type DuckFormProps = CommonProps &
   (
-    | { mode: 'create'; duck?: undefined; onSaved: (result: DuckWriteResult, sent: CreateDuckInput) => void }
+    | {
+        mode: 'create';
+        duck?: undefined;
+        onSaved: (result: DuckWriteResult, sent: CreateDuckInput) => void;
+      }
     | {
         mode: 'edit';
         duck: Duck;
@@ -134,7 +138,10 @@ export function DuckForm(props: DuckFormProps) {
     >
       <form noValidate onSubmit={handleSubmit} className="mt-4 space-y-4">
         {formErrors.length > 0 && (
-          <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          <div
+            role="alert"
+            className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+          >
             {formErrors.length === 1 ? (
               <p>{formErrors[0]}</p>
             ) : (
@@ -161,7 +168,11 @@ export function DuckForm(props: DuckFormProps) {
               onChange={(e) => edit('color', setColor)(e.target.value as Color)}
               disabled={isEdit}
               aria-invalid={errors.color ? true : undefined}
-              aria-describedby={describedBy(ids.color, errors.color, isEdit ? ids.locked : undefined)}
+              aria-describedby={describedBy(
+                ids.color,
+                errors.color,
+                isEdit ? ids.locked : undefined,
+              )}
               className={inputClass(errors.color)}
             >
               {!isEdit && <option value="">Select a color</option>}

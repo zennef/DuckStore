@@ -65,6 +65,8 @@ describe('CountryTaxRule', () => {
 
   it('rounds tax half-up', () => {
     // 13% of $1.50 = $0.195 -> $0.20
-    expect(rule.apply(makeContext({ country: 'Bolivia', runningTotalCents: 150 })).amountCents).toBe(20);
+    expect(
+      rule.apply(makeContext({ country: 'Bolivia', runningTotalCents: 150 })).amountCents,
+    ).toBe(20);
   });
 });

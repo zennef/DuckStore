@@ -18,12 +18,24 @@ export function DuckTable({ ducks, onEdit, onDelete }: DuckTableProps) {
       <table className="w-full min-w-[640px] border-collapse">
         <thead className="bg-gray-50">
           <tr>
-            <th scope="col" className={th}>ID</th>
-            <th scope="col" className={th}>Color</th>
-            <th scope="col" className={th}>Size</th>
-            <th scope="col" className={`${th} text-center`}>Price (USD)</th>
-            <th scope="col" className={`${th} text-center`}>Quantity</th>
-            <th scope="col" className={th}>Actions</th>
+            <th scope="col" className={th}>
+              ID
+            </th>
+            <th scope="col" className={th}>
+              Color
+            </th>
+            <th scope="col" className={th}>
+              Size
+            </th>
+            <th scope="col" className={`${th} text-center`}>
+              Price (USD)
+            </th>
+            <th scope="col" className={`${th} text-center`}>
+              Quantity
+            </th>
+            <th scope="col" className={th}>
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">

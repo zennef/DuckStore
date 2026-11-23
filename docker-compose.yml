@@ -7,11 +7,11 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: duck_store
     ports:
-      - "3306:3306"
+      - '3306:3306'
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-uroot', '-proot']
       interval: 5s
       timeout: 5s
       retries: 20

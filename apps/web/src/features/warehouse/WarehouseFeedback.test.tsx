@@ -87,7 +87,10 @@ describe('Warehouse feedback', () => {
   it('confirms a plain edit', async () => {
     mockFetch({
       'GET /api/ducks': { status: 200, body: MOCKUP_DUCKS },
-      'PATCH /api/ducks/4': { status: 200, body: { duck: { ...black4, quantity: 900 }, merged: false } },
+      'PATCH /api/ducks/4': {
+        status: 200,
+        body: { duck: { ...black4, quantity: 900 }, merged: false },
+      },
     });
     const { user } = await renderPage();
 

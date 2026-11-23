@@ -21,7 +21,9 @@ describe('VolumeDiscountRule', () => {
   });
 
   it('applies to the running total, not quantity x price', () => {
-    const item = rule.apply(makeContext({ quantity: 150, unitPriceCents: 1500, runningTotalCents: 10_000 }));
+    const item = rule.apply(
+      makeContext({ quantity: 150, unitPriceCents: 1500, runningTotalCents: 10_000 }),
+    );
     expect(item?.amountCents).toBe(-2000);
   });
 });
