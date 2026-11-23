@@ -18,6 +18,7 @@ The original spec lives in `docs/spec.pdf`. This file records how we're interpre
 | Database | MySQL 8 via Prisma                      |
 | Testing  | Jest (unit + e2e on API), Vitest + Testing Library (web) |
 | Local DB | Docker Compose                          |
+| Format   | Prettier (`npm run format`, checked in CI) |
 
 **Why MySQL over MongoDB:** the spec models Duck with an integer `Id`, which maps to auto-increment for free. Mongo would need a counter collection to fake it.
 
@@ -150,6 +151,7 @@ Request:
 ```
 
 Response (201):
+<!-- prettier-ignore -->
 ```json
 {
   "duckId": 3,

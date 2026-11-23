@@ -15,10 +15,13 @@
     "dev:web": "npm run dev -w @duck-store/web",
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
-    "test:e2e": "npm run test:e2e -w @duck-store/api"
+    "test:e2e": "npm run test:e2e -w @duck-store/api",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "prettier": "^3.10.1"
   },
   "engines": {
     "node": ">=22"
