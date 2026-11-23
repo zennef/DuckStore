@@ -210,14 +210,3 @@ Every write is either a single conditional statement or one transaction, and the
 **Deadlocks become a 409.** Two simultaneous edits that move ducks onto each other's prices (A to B's price while B goes to A's) can deadlock, since each holds its own row lock and waits on the other's. MySQL rolls one back, and `PrismaConflictFilter` maps that to a 409. The web app keeps the dialog open with the message and your values, so you can resubmit.
 
 **The accepted merge-on-add race.** Two concurrent adds of a color, size and price that doesn't exist yet can both miss the lookup and create twins. A unique index would prevent it, using a generated column that is NULL when `deleted = true` so soft-deleted rows can share values. I didn't do it because Prisma doesn't model generated columns, so it would mean hand-written migration SQL for a rare edge case. If twins do appear, the next edit of either one merges them, and orders handle twins fine because they pick the cheapest match with the lowest id.
-
-## What I'd do next
-
-- **Persist orders.** Right now an order decrements stock and returns its pricing, but nothing records it. An `orders` table with the line items would give an audit trail and make it possible to cancel or refund.
-- **Close the merge-on-add race** with the generated column and unique index above, with the migration SQL written by hand.
-- **An idempotency key on orders**, so a client retrying after a timeout can't place the same order twice.
-- **A Store frontend.** The Store module is backend only per the spec, and the page is a placeholder listing the endpoints.
-- **A history view** of soft-deleted and merged ducks, since the data is already kept.
-- **Browser e2e tests** that run the web app against the real API. The web tests stub `fetch`, and the API e2e tests stop at HTTP.
-- **Revisit the 100 vs 101 cliff** with whoever owns the pricing, if the spec can change. A discount that only applies to units past 100 would remove it.
-- **OpenAPI docs** generated from the DTOs, instead of the hand-written reference above.
