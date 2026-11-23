@@ -59,9 +59,9 @@ describe('DucksService', () => {
 
     it('accepts a duck whose stock exactly equals the requested quantity', async () => {
       findMany.mockResolvedValue([duck({ id: 7, quantity: 50 })]);
-      await expect(service.findCheapestMatch(Color.Green, Size.Medium, 50)).resolves.toMatchObject(
-        { id: 7 },
-      );
+      await expect(service.findCheapestMatch(Color.Green, Size.Medium, 50)).resolves.toMatchObject({
+        id: 7,
+      });
     });
 
     it('breaks price ties by lowest id', async () => {
@@ -94,9 +94,7 @@ describe('DucksService', () => {
 
     it('decrements with a conditional update on id, price, deleted and stock', async () => {
       updateMany.mockResolvedValue({ count: 1 });
-      await expect(
-        service.decrementStock(duck({ id: 3, price: 15 }), 40),
-      ).resolves.toBeUndefined();
+      await expect(service.decrementStock(duck({ id: 3, price: 15 }), 40)).resolves.toBeUndefined();
       expect(updateMany).toHaveBeenCalledWith({
         where: { id: 3, price: 15, deleted: false, quantity: { gte: 40 } },
         data: { quantity: { decrement: 40 } },

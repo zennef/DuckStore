@@ -10,8 +10,11 @@ if (typeof HTMLDialogElement.prototype.showModal !== 'function') {
   HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
     if (this.open) return;
     this.setAttribute('open', '');
-    const target = this.querySelector<HTMLElement>('[autofocus]') ??
-      this.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled])');
+    const target =
+      this.querySelector<HTMLElement>('[autofocus]') ??
+      this.querySelector<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled])',
+      );
     target?.focus();
   };
 

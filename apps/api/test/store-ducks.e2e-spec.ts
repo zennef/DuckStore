@@ -31,7 +31,10 @@ describe('Store ducks (e2e)', () => {
     expect(created.body).toEqual({ merged: false, duck: { id: 1, ...body, deleted: false } });
 
     const merged = await t.api().post('/api/store/ducks').send(body).expect(200);
-    expect(merged.body).toEqual({ merged: true, duck: { id: 1, ...body, quantity: 200, deleted: false } });
+    expect(merged.body).toEqual({
+      merged: true,
+      duck: { id: 1, ...body, quantity: 200, deleted: false },
+    });
   });
 
   it('edits price and quantity, and rejects color', async () => {

@@ -59,7 +59,12 @@ describe('Ducks (e2e)', () => {
     });
 
     it('merges into a matching duck with 200 and sums quantity', async () => {
-      const existing = await seed({ color: Color.Green, size: Size.Medium, price: 15, quantity: 40 });
+      const existing = await seed({
+        color: Color.Green,
+        size: Size.Medium,
+        price: 15,
+        quantity: 40,
+      });
 
       const res = await api().post('/api/ducks').send(body).expect(200);
       expect(res.body).toEqual({ merged: true, duck: { ...existing, quantity: 140 } });

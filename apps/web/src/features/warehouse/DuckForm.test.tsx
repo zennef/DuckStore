@@ -202,7 +202,10 @@ describe('DuckForm', () => {
 
     it('allows quantity 0', async () => {
       const fetchMock = mockFetch({
-        'PATCH /api/ducks/4': { status: 200, body: { duck: { ...black4, quantity: 0 }, merged: false } },
+        'PATCH /api/ducks/4': {
+          status: 200,
+          body: { duck: { ...black4, quantity: 0 }, merged: false },
+        },
       });
       const { user, onSaved } = renderEdit();
 
@@ -228,7 +231,10 @@ describe('DuckForm', () => {
 
     it('sends only the price when only the price changed', async () => {
       const fetchMock = mockFetch({
-        'PATCH /api/ducks/4': { status: 200, body: { duck: { ...black4, price: 16.25 }, merged: false } },
+        'PATCH /api/ducks/4': {
+          status: 200,
+          body: { duck: { ...black4, price: 16.25 }, merged: false },
+        },
       });
       const { user, onSaved } = renderEdit();
 
@@ -254,7 +260,9 @@ describe('DuckForm', () => {
       await user.click(screen.getByRole('button', { name: 'Save Changes' }));
 
       await waitFor(() => expect(onSaved).toHaveBeenCalled());
-      expect(requestBodies(fetchMock, 'PATCH /api/ducks/4')).toEqual([{ price: 9.99, quantity: 10 }]);
+      expect(requestBodies(fetchMock, 'PATCH /api/ducks/4')).toEqual([
+        { price: 9.99, quantity: 10 },
+      ]);
     });
 
     it('treats a reformatted but equal price as unchanged and sends nothing', async () => {
@@ -285,7 +293,10 @@ describe('DuckForm', () => {
       await user.click(screen.getByRole('button', { name: 'Save Changes' }));
 
       await waitFor(() => expect(onNotFound).toHaveBeenCalled());
-      expect(onNotFound.mock.calls[0][0]).toMatchObject({ status: 404, message: 'Duck 4 not found' });
+      expect(onNotFound.mock.calls[0][0]).toMatchObject({
+        status: 404,
+        message: 'Duck 4 not found',
+      });
       expect(onSaved).not.toHaveBeenCalled();
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
@@ -295,7 +306,11 @@ describe('DuckForm', () => {
         'PATCH /api/ducks/4': [
           {
             status: 409,
-            body: { statusCode: 409, message: 'Conflicting update, please retry', error: 'Conflict' },
+            body: {
+              statusCode: 409,
+              message: 'Conflicting update, please retry',
+              error: 'Conflict',
+            },
           },
           { status: 200, body: { duck: { ...black4, price: 16.5, quantity: 12 }, merged: false } },
         ],
@@ -308,7 +323,9 @@ describe('DuckForm', () => {
       await user.type(field('Quantity'), '12');
       await user.click(screen.getByRole('button', { name: 'Save Changes' }));
 
-      expect(await screen.findByRole('alert')).toHaveTextContent('Conflicting update, please retry');
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Conflicting update, please retry',
+      );
       expect(screen.getByRole('dialog', { name: 'Edit duck #4' })).toHaveAttribute('open');
       expect(field('Price (USD)')).toHaveValue('16.50');
       expect(field('Quantity')).toHaveValue('12');

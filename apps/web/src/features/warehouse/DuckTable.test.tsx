@@ -6,7 +6,11 @@ import { WarehousePage } from './WarehousePage';
 
 function bodyRows() {
   const [, ...rows] = screen.getAllByRole('row');
-  return rows.map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
+  return rows.map((row) =>
+    within(row)
+      .getAllByRole('cell')
+      .map((cell) => cell.textContent),
+  );
 }
 
 describe('Duck inventory table', () => {
@@ -15,9 +19,14 @@ describe('Duck inventory table', () => {
     renderWithProviders(<WarehousePage />);
 
     await screen.findByRole('table');
-    expect(
-      screen.getAllByRole('columnheader').map((th) => th.textContent),
-    ).toEqual(['ID', 'Color', 'Size', 'Price (USD)', 'Quantity', 'Actions']);
+    expect(screen.getAllByRole('columnheader').map((th) => th.textContent)).toEqual([
+      'ID',
+      'Color',
+      'Size',
+      'Price (USD)',
+      'Quantity',
+      'Actions',
+    ]);
 
     const rows = bodyRows();
     expect(rows.map((cells) => cells[0])).toEqual(['6', '2', '1', '4', '3', '5', '7']);
@@ -31,7 +40,9 @@ describe('Duck inventory table', () => {
     mockFetch({
       'GET /api/ducks': {
         status: 200,
-        body: [{ id: 9, color: 'Red', size: 'Small', price: 12.5, quantity: 1234567, deleted: false }],
+        body: [
+          { id: 9, color: 'Red', size: 'Small', price: 12.5, quantity: 1234567, deleted: false },
+        ],
       },
     });
     renderWithProviders(<WarehousePage />);

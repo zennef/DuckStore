@@ -61,7 +61,12 @@ describe('Orders (e2e)', () => {
   });
 
   it('draws from the cheapest duck with enough stock', async () => {
-    const pricey = await t.seed({ color: Color.Green, size: Size.Medium, price: 15, quantity: 500 });
+    const pricey = await t.seed({
+      color: Color.Green,
+      size: Size.Medium,
+      price: 15,
+      quantity: 500,
+    });
     await t.seed({ color: Color.Green, size: Size.Medium, price: 9, quantity: 100 }); // too few
     const cheapest = await t.seed({
       color: Color.Green,
@@ -123,7 +128,12 @@ describe('Orders (e2e)', () => {
   });
 
   it('refuses to take stock at a price the duck no longer has', async () => {
-    const seeded = await t.seed({ color: Color.Green, size: Size.Medium, price: 15, quantity: 500 });
+    const seeded = await t.seed({
+      color: Color.Green,
+      size: Size.Medium,
+      price: 15,
+      quantity: 500,
+    });
     const ducks = t.app.get(DucksService);
 
     const priced = await ducks.findCheapestMatch(Color.Green, Size.Medium, 150);

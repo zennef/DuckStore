@@ -1,6 +1,10 @@
 const ENDPOINTS: { method: string; path: string; description: string }[] = [
   { method: 'GET', path: '/api/store/ducks', description: 'List ducks, sorted by quantity' },
-  { method: 'POST', path: '/api/store/ducks', description: 'Add a duck, merging into a matching one' },
+  {
+    method: 'POST',
+    path: '/api/store/ducks',
+    description: 'Add a duck, merging into a matching one',
+  },
   { method: 'PATCH', path: '/api/store/ducks/:id', description: 'Update price or quantity' },
   { method: 'DELETE', path: '/api/store/ducks/:id', description: 'Soft-delete a duck' },
   {

@@ -1,0 +1,65 @@
+name: CI
+
+# Push only on main: PR branches are covered by pull_request, so they don't run twice.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch or PR cancels the run in progress.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      # Same image as docker-compose.yml.
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: duck_store
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      # e2e tests append _test to the database name, and their global setup
+      # creates it with prisma migrate deploy.
+      DATABASE_URL: mysql://root:root@127.0.0.1:3306/duck_store
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: API unit tests
+        run: npm test -w @duck-store/api
+
+      - name: API e2e tests
+        run: npm run test:e2e
+
+      - name: Web tests
+        run: npm test -w @duck-store/web
+
+      - name: Build API and web
+        run: npm run build

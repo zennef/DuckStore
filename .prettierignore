@@ -1,0 +1,9 @@
+# Build output and coverage
+dist/
+coverage/
+*.tsbuildinfo
+
+# Generated or managed by tools
+package-lock.json
+node_modules/
+apps/api/prisma/migrations/
