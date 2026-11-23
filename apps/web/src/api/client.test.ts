@@ -51,7 +51,8 @@ describe('ducksApi', () => {
     expect(error.messages).toEqual(['Duck 9 not found']);
     expect(error.message).toBe('Duck 9 not found');
     expect(error.error).toBe('Not Found');
-    expect(error.isStale).toBe(true);
+    expect(error.isNotFound).toBe(true);
+    expect(error.isConflict).toBe(false);
   });
 
   it('parses a Nest validation error with a message array', async () => {
@@ -68,7 +69,8 @@ describe('ducksApi', () => {
     );
     expect(error.status).toBe(400);
     expect(error.messages).toEqual(messages);
-    expect(error.isStale).toBe(false);
+    expect(error.isNotFound).toBe(false);
+    expect(error.isConflict).toBe(false);
   });
 
   it('falls back to the status when the error body is not JSON', async () => {

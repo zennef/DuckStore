@@ -81,4 +81,33 @@ describe('Delete confirmation', () => {
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('Internal server error');
     expect(within(dialog).getByRole('button', { name: 'Delete' })).toBeEnabled();
   });
+
+  it('keeps the dialog open on a 409 so the user can retry', async () => {
+    const fetchMock = mockFetch({
+      'GET /api/ducks': [
+        { status: 200, body: MOCKUP_DUCKS },
+        { status: 200, body: MOCKUP_DUCKS },
+        { status: 200, body: withoutDuck4 },
+      ],
+      'DELETE /api/ducks/4': [
+        {
+          status: 409,
+          body: { statusCode: 409, message: 'Conflicting update, please retry', error: 'Conflict' },
+        },
+        { status: 204 },
+      ],
+    });
+    const { user, dialog } = await openDeleteFor4();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Conflicting update, please retry',
+    );
+    expect(dialog).toHaveAttribute('open');
+
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(callCount(fetchMock, 'DELETE /api/ducks/4')).toBe(2);
+  });
 });

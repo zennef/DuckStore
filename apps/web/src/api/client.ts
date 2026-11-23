@@ -20,9 +20,14 @@ export class ApiError extends Error {
     this.error = error;
   }
 
-  /** The duck was deleted, merged away or changed by someone else since the list loaded. */
-  get isStale(): boolean {
-    return this.status === 404 || this.status === 409;
+  /** 404: the duck is gone (deleted or merged away) since the list loaded. */
+  get isNotFound(): boolean {
+    return this.status === 404;
+  }
+
+  /** 409: a concurrent write got in the way. The duck still exists, so a retry can work. */
+  get isConflict(): boolean {
+    return this.status === 409;
   }
 }
 

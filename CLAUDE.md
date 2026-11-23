@@ -108,7 +108,7 @@ If editing a duck (A) would make it identical (color, size, price) to another no
 **Routes:** `/` redirects to `/warehouse`. `/store` is the placeholder, listing the Store endpoints. Anything else shows a small "Page not found".
 
 **API layer (`src/api`):**
-- `client.ts` is a typed fetch client for `/api/ducks` (list, create, update, remove). Failures throw `ApiError` with `status`, `messages` (always an array, since Nest sends a string or a string array) and `error`. A non-JSON error body falls back to the status; an unreachable server is `status: 0`. `isStale` is true for 404 and 409.
+- `client.ts` is a typed fetch client for `/api/ducks` (list, create, update, remove). Failures throw `ApiError` with `status`, `messages` (always an array, since Nest sends a string or a string array) and `error`. A non-JSON error body falls back to the status; an unreachable server is `status: 0`. `isNotFound` (404) and `isConflict` (409) name the two cases the UI treats differently.
 - `ducks.ts` holds the TanStack Query hooks. Every mutation invalidates the ducks list **on settle**, success or failure, because a failed edit or delete usually means the list is stale.
 
 **Modals:** `components/Modal.tsx` wraps the native `<dialog>` with `showModal()` (focus trap, Esc and backdrop for free). Mount it to open, unmount it to close. Focus returns to whatever was focused when it opened, captured during the first render because React applies `autoFocus` before effects run. Esc is blocked while a request is pending, so a result is never dropped. jsdom has no `showModal()`, so `test/setup.ts` polyfills the parts we use.
@@ -125,7 +125,8 @@ If editing a duck (A) would make it identical (color, size, price) to another no
 - `components/Toast.tsx`: one always-present `aria-live="polite"` region, at most 3 toasts, dismissible, success 5s and error 8s. Copy lives in `features/warehouse/messages.ts`.
 - Toasts show after the dialog closes (a modal dialog's top layer would cover them).
 - Merges say so: "Added 50 to existing duck #6 (Yellow, XLarge)." for an add, "Duck #4 now matches duck #3 (Yellow, Medium), so it was merged into it." for an edit. Otherwise "Duck #8 added.", "Duck #4 updated.", "Duck #4 deleted."
-- A 404 or 409 on edit or delete closes the dialog and toasts the server message; the list refetches via the mutation. Any other error stays inline in the dialog so the user can retry.
+- A 404 on edit or delete means the duck is gone: close the dialog and toast the server message; the list refetches via the mutation.
+- A 409 on edit or delete (a concurrent write, e.g. "Conflicting update, please retry") keeps the dialog open with the server message in its inline alert. The duck still exists, so the form keeps the user's values and they can resubmit. The list still refetches. Any other error also stays inline.
 
 **Table:** rows in API order. Price as `$25.00` and quantity as `5,000` (en-US), both centered as in the mockup. Row actions have accessible names like "Edit duck #6".
 

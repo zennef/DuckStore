@@ -151,12 +151,15 @@ describe('Warehouse feedback', () => {
     expect(callCount(fetchMock, 'GET /api/ducks')).toBe(2);
   });
 
-  it('on a 409 from a delete, closes the dialog, shows the server message and refetches', async () => {
+  it('on a 404 from a delete, closes the dialog, shows the message and refetches', async () => {
     const fetchMock = mockFetch({
-      'GET /api/ducks': { status: 200, body: MOCKUP_DUCKS },
+      'GET /api/ducks': [
+        { status: 200, body: MOCKUP_DUCKS },
+        { status: 200, body: MOCKUP_DUCKS.filter((d) => d.id !== 4) },
+      ],
       'DELETE /api/ducks/4': {
-        status: 409,
-        body: { statusCode: 409, message: 'Conflicting update, please retry', error: 'Conflict' },
+        status: 404,
+        body: { statusCode: 404, message: 'Duck 4 not found', error: 'Not Found' },
       },
     });
     const { user } = await renderPage();
@@ -164,9 +167,40 @@ describe('Warehouse feedback', () => {
     await user.click(screen.getByRole('button', { name: 'Delete duck #4' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
 
-    expect(await toasts().findByText('Conflicting update, please retry')).toBeInTheDocument();
+    expect(await toasts().findByText('Duck 4 not found')).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    await waitFor(() => expect(callCount(fetchMock, 'GET /api/ducks')).toBe(2));
+    expect(callCount(fetchMock, 'GET /api/ducks')).toBe(2);
+  });
+
+  it('on a 409 from an edit or delete, keeps the dialog open and shows no toast', async () => {
+    const conflict = {
+      status: 409,
+      body: { statusCode: 409, message: 'Conflicting update, please retry', error: 'Conflict' },
+    };
+    const fetchMock = mockFetch({
+      'GET /api/ducks': { status: 200, body: MOCKUP_DUCKS },
+      'PATCH /api/ducks/4': conflict,
+      'DELETE /api/ducks/4': conflict,
+    });
+    const { user } = await renderPage();
+
+    await editQuantity(user, 4, '10');
+    const editDialog = screen.getByRole('dialog', { name: 'Edit duck #4' });
+    expect(await within(editDialog).findByRole('alert')).toHaveTextContent(
+      'Conflicting update, please retry',
+    );
+    await user.click(within(editDialog).getByRole('button', { name: 'Cancel' }));
+
+    await user.click(screen.getByRole('button', { name: 'Delete duck #4' }));
+    const deleteDialog = screen.getByRole('dialog');
+    await user.click(within(deleteDialog).getByRole('button', { name: 'Delete' }));
+    expect(await within(deleteDialog).findByRole('alert')).toHaveTextContent(
+      'Conflicting update, please retry',
+    );
+
+    expect(toasts().queryByText('Conflicting update, please retry')).not.toBeInTheDocument();
+    // Both conflicts still refetched the list, since the duck may have changed.
+    await waitFor(() => expect(callCount(fetchMock, 'GET /api/ducks')).toBe(3));
   });
 
   it('lets the user dismiss a toast', async () => {

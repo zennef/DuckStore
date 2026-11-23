@@ -29,8 +29,11 @@ export type DuckFormProps = CommonProps &
         mode: 'edit';
         duck: Duck;
         onSaved: (result: DuckWriteResult, sent: UpdateDuckInput) => void;
-        /** 404 or 409: the duck changed underneath the user, so editing it no longer makes sense. */
-        onStale: (error: ApiError) => void;
+        /**
+         * 404: the duck was deleted or merged away, so editing it no longer makes sense. A 409
+         * (concurrent write) is not passed here: it shows inline and the user can resubmit.
+         */
+        onNotFound: (error: ApiError) => void;
       }
   );
 
@@ -106,13 +109,14 @@ export function DuckForm(props: DuckFormProps) {
       setFormErrors(['Nothing to save: price and quantity are unchanged.']);
       return;
     }
-    const { onSaved, onStale } = props;
+    const { onSaved, onNotFound } = props;
     update.mutate(
       { id: props.duck.id, input },
       {
         onSuccess: (result) => onSaved(result, input),
+        // Anything but a 404, including a 409, stays inline with the typed values kept.
         onError: (error) => {
-          if (error instanceof ApiError && error.isStale) onStale(error);
+          if (error instanceof ApiError && error.isNotFound) onNotFound(error);
           else showServerError(error);
         },
       },

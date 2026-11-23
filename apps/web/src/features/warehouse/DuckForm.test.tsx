@@ -18,11 +18,17 @@ function renderCreate() {
 function renderEdit() {
   const onSaved = vi.fn();
   const onClose = vi.fn();
-  const onStale = vi.fn();
+  const onNotFound = vi.fn();
   const view = renderWithProviders(
-    <DuckForm mode="edit" duck={black4} onSaved={onSaved} onClose={onClose} onStale={onStale} />,
+    <DuckForm
+      mode="edit"
+      duck={black4}
+      onSaved={onSaved}
+      onClose={onClose}
+      onNotFound={onNotFound}
+    />,
   );
-  return { ...view, onSaved, onClose, onStale };
+  return { ...view, onSaved, onClose, onNotFound };
 }
 
 const field = (name: string) => screen.getByLabelText(name);
@@ -265,20 +271,58 @@ describe('DuckForm', () => {
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
-    it.each([404, 409])('hands a %i to onStale instead of showing it inline', async (status) => {
+    it('hands a 404 to onNotFound instead of showing it inline', async () => {
       mockFetch({
-        'PATCH /api/ducks/4': { status, body: { statusCode: status, message: 'Duck 4 not found' } },
+        'PATCH /api/ducks/4': {
+          status: 404,
+          body: { statusCode: 404, message: 'Duck 4 not found', error: 'Not Found' },
+        },
       });
-      const { user, onStale, onSaved } = renderEdit();
+      const { user, onNotFound, onSaved } = renderEdit();
 
       await user.clear(field('Quantity'));
       await user.type(field('Quantity'), '1');
       await user.click(screen.getByRole('button', { name: 'Save Changes' }));
 
-      await waitFor(() => expect(onStale).toHaveBeenCalled());
-      expect(onStale.mock.calls[0][0]).toMatchObject({ status, message: 'Duck 4 not found' });
+      await waitFor(() => expect(onNotFound).toHaveBeenCalled());
+      expect(onNotFound.mock.calls[0][0]).toMatchObject({ status: 404, message: 'Duck 4 not found' });
       expect(onSaved).not.toHaveBeenCalled();
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('keeps the form open on a 409 with the message inline and the typed values intact', async () => {
+      const fetchMock = mockFetch({
+        'PATCH /api/ducks/4': [
+          {
+            status: 409,
+            body: { statusCode: 409, message: 'Conflicting update, please retry', error: 'Conflict' },
+          },
+          { status: 200, body: { duck: { ...black4, price: 16.5, quantity: 12 }, merged: false } },
+        ],
+      });
+      const { user, onNotFound, onSaved, onClose } = renderEdit();
+
+      await user.clear(field('Price (USD)'));
+      await user.type(field('Price (USD)'), '16.50');
+      await user.clear(field('Quantity'));
+      await user.type(field('Quantity'), '12');
+      await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Conflicting update, please retry');
+      expect(screen.getByRole('dialog', { name: 'Edit duck #4' })).toHaveAttribute('open');
+      expect(field('Price (USD)')).toHaveValue('16.50');
+      expect(field('Quantity')).toHaveValue('12');
+      expect(screen.getByRole('button', { name: 'Save Changes' })).toBeEnabled();
+      expect(onNotFound).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
+
+      // Resubmitting sends the same values again.
+      await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await waitFor(() => expect(onSaved).toHaveBeenCalled());
+      expect(requestBodies(fetchMock, 'PATCH /api/ducks/4')).toEqual([
+        { price: 16.5, quantity: 12 },
+        { price: 16.5, quantity: 12 },
+      ]);
     });
   });
 });

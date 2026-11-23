@@ -23,9 +23,9 @@ export function WarehousePage() {
     close();
     toast(message);
   };
-  // 404/409 on edit or delete: the duck changed underneath the user. The mutation already
-  // refetches the list on settle, so close and explain with the server's message.
-  const closeWithStale = (error: ApiError) => {
+  // 404 on edit or delete: the duck is gone. The mutation already refetches the list on
+  // settle, so close and explain with the server's message. A 409 stays in the dialog.
+  const closeWithNotFound = (error: ApiError) => {
     close();
     toast(error.message, 'error');
   };
@@ -99,7 +99,7 @@ export function WarehousePage() {
           duck={dialog.duck}
           onClose={close}
           onSaved={(result) => closeWith(updatedMessage(dialog.duck, result))}
-          onStale={closeWithStale}
+          onNotFound={closeWithNotFound}
         />
       )}
       {dialog?.kind === 'delete' && (
@@ -107,7 +107,7 @@ export function WarehousePage() {
           duck={dialog.duck}
           onClose={close}
           onDeleted={(duck) => closeWith(deletedMessage(duck))}
-          onStale={closeWithStale}
+          onNotFound={closeWithNotFound}
         />
       )}
     </div>
